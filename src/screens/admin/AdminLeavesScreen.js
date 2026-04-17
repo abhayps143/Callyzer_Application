@@ -5,7 +5,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API = 'http://192.168.1.65:5000/api';
+//Vianayk IP-Adress
+// const API = 'http://192.168.1.65:5000/api';
+
+//Abhay IP-Adress
+const API = 'http://192.168.1.51:5000/api';
 
 const STATUS_CONFIG = {
   pending: { color: '#F59E0B', bg: '#FEF3C7', label: 'Pending' },

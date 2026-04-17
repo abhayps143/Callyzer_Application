@@ -4,10 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Local WiFi ke liye: 'http://192.168.X.X:5000/api'  (CMD > ipconfig se IPv4 dekho)
 // Production server ke liye: 'https://yourserver.com/api'
 //Abhay IP-Adress
-// const API_BASE_URL = 'http://192.168.1.51:5000/api';
+const API_BASE_URL = 'http://192.168.1.51:5000/api';
 
 //Vinayak Ip-Adress
-const API_BASE_URL = 'http://192.168.1.65:5000/api';
+// const API_BASE_URL = 'http://192.168.1.65:5000/api';
+
 
 const getToken = async () => {
     return await AsyncStorage.getItem('token');
@@ -15,6 +16,8 @@ const getToken = async () => {
 
 const authHeaders = async () => {
     const token = await getToken();
+    console.log('📝 Token being sent:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+
     return {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,

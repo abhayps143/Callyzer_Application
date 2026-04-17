@@ -5,7 +5,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API = 'http://192.168.1.65:5000/api';
+//Vianayk IP-Adress
+// const API = 'http://192.168.1.65:5000/api';
+
+//Abhay IP-Adress
+const API = 'http://192.168.1.51:5000/api';
 
 const STATUS_CONFIG = {
   present: { label: 'Present', color: '#10B981', bg: '#D1FAE5' },
@@ -61,7 +65,7 @@ export default function AdminAttendanceScreen() {
         // ✅ FIX: Ensure attendance is always an array
         const attendanceData = data.attendance || data || [];
         setAttendance(Array.isArray(attendanceData) ? attendanceData : []);
-      } catch (e) { 
+      } catch (e) {
         console.log(e);
         setAttendance([]);  // ✅ On error, set empty array
       }
@@ -75,11 +79,11 @@ export default function AdminAttendanceScreen() {
   );
 
   // ✅ FIX: Check if attendance is array before using reduce
-  const stats = Array.isArray(attendance) && attendance.length > 0 
+  const stats = Array.isArray(attendance) && attendance.length > 0
     ? attendance.reduce((acc, a) => {
-        acc[a.status] = (acc[a.status] || 0) + 1;
-        return acc;
-      }, {})
+      acc[a.status] = (acc[a.status] || 0) + 1;
+      return acc;
+    }, {})
     : {};
 
   if (loadingEmps) return <View style={styles.center}><ActivityIndicator size="large" color="#3B82F6" /></View>;
