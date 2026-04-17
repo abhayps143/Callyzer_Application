@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView,
-    ActivityIndicator, TouchableOpacity, RefreshControl
+    View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl
 } from 'react-native';
 import { api } from '../services/api';
 
@@ -25,98 +24,58 @@ export default function LeaderboardScreen() {
     const fetchLeaderboard = useCallback(async () => {
         setError('');
         try {
-            // Backend: GET /api/calls/leaderboard?period=weekly
-            // Returns: { leaderboard: [{ agentName, agentEmail, totalCalls, salesDone, totalDuration }] }
             const res = await api.getLeaderboard(period);
             setLeaders(res.leaderboard || []);
-        } catch (e) {
-            setError('Data load nahi hua');
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
+        } catch (e) { setError('Data load nahi hua'); }
+        finally { setLoading(false); setRefreshing(false); }
     }, [period]);
 
-    useEffect(() => {
-        setLoading(true);
-        fetchLeaderboard();
-    }, [fetchLeaderboard]);
+    useEffect(() => { setLoading(true); fetchLeaderboard(); }, [fetchLeaderboard]);
 
     const onRefresh = () => { setRefreshing(true); fetchLeaderboard(); };
 
     return (
-        <ScrollView
-            style={styles.container}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}
-        >
-            {/* Header */}
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}>
             <View style={styles.header}>
                 <Text style={styles.title}>🏆 Leaderboard</Text>
                 <Text style={styles.subtitle}>Top performing agents</Text>
             </View>
 
-            {/* Period Toggle */}
             <View style={styles.toggleRow}>
                 {[
                     { key: 'weekly', label: 'This Week' },
                     { key: 'monthly', label: 'This Month' },
                 ].map(p => (
-                    <TouchableOpacity
-                        key={p.key}
-                        style={[styles.toggleBtn, period === p.key && styles.toggleBtnActive]}
-                        onPress={() => setPeriod(p.key)}
-                    >
-                        <Text style={[styles.toggleText, period === p.key && styles.toggleTextActive]}>
-                            {p.label}
-                        </Text>
+                    <TouchableOpacity key={p.key} style={[styles.toggleBtn, period === p.key && styles.toggleBtnActive]} onPress={() => setPeriod(p.key)}>
+                        <Text style={[styles.toggleText, period === p.key && styles.toggleTextActive]}>{p.label}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
 
             {loading ? (
-                <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#f59e0b" />
-                </View>
+                <View style={styles.center}><ActivityIndicator size="large" color="#f59e0b" /></View>
             ) : error ? (
-                <View style={styles.center}>
-                    <Text style={styles.errorText}>⚠️ {error}</Text>
-                    <TouchableOpacity onPress={fetchLeaderboard} style={{ marginTop: 12 }}>
-                        <Text style={styles.retryText}>Retry →</Text>
-                    </TouchableOpacity>
-                </View>
+                <View style={styles.center}><Text style={styles.errorText}>⚠️ {error}</Text><TouchableOpacity onPress={fetchLeaderboard} style={{ marginTop: 12 }}><Text style={styles.retryText}>Retry →</Text></TouchableOpacity></View>
             ) : leaders.length === 0 ? (
-                <View style={styles.center}>
-                    <Text style={styles.emptyIcon}>📭</Text>
-                    <Text style={styles.emptyText}>Is period ke liye koi data nahi</Text>
-                </View>
+                <View style={styles.center}><Text style={styles.emptyIcon}>📭</Text><Text style={styles.emptyText}>Is period ke liye koi data nahi</Text></View>
             ) : (
                 <View style={styles.list}>
-                    {/* Top 3 podium highlight */}
                     {leaders.length >= 3 && (
                         <View style={styles.podium}>
-                            {/* 2nd place */}
                             <View style={styles.podiumItem}>
-                                <View style={[styles.podiumAvatar, { backgroundColor: '#94a3b820', width: 50, height: 50, borderRadius: 25 }]}>
-                                    <Text style={{ fontSize: 20 }}>🥈</Text>
-                                </View>
+                                <View style={[styles.podiumAvatar, { backgroundColor: '#94a3b820', width: 50, height: 50, borderRadius: 25 }]}><Text style={{ fontSize: 20 }}>🥈</Text></View>
                                 <Text style={styles.podiumName} numberOfLines={1}>{(leaders[1]?.agentName || '').split(' ')[0]}</Text>
                                 <Text style={styles.podiumCalls}>{leaders[1]?.totalCalls} calls</Text>
                                 <View style={[styles.podiumBar, { height: 50, backgroundColor: '#94a3b830' }]} />
                             </View>
-                            {/* 1st place */}
                             <View style={[styles.podiumItem, { marginBottom: -8 }]}>
-                                <View style={[styles.podiumAvatar, { backgroundColor: '#f59e0b20', width: 60, height: 60, borderRadius: 30 }]}>
-                                    <Text style={{ fontSize: 26 }}>🥇</Text>
-                                </View>
+                                <View style={[styles.podiumAvatar, { backgroundColor: '#f59e0b20', width: 60, height: 60, borderRadius: 30 }]}><Text style={{ fontSize: 26 }}>🥇</Text></View>
                                 <Text style={[styles.podiumName, { color: '#f59e0b', fontSize: 14 }]} numberOfLines={1}>{(leaders[0]?.agentName || '').split(' ')[0]}</Text>
                                 <Text style={[styles.podiumCalls, { color: '#f59e0b' }]}>{leaders[0]?.totalCalls} calls</Text>
                                 <View style={[styles.podiumBar, { height: 70, backgroundColor: '#f59e0b30' }]} />
                             </View>
-                            {/* 3rd place */}
                             <View style={styles.podiumItem}>
-                                <View style={[styles.podiumAvatar, { backgroundColor: '#f9730020', width: 46, height: 46, borderRadius: 23 }]}>
-                                    <Text style={{ fontSize: 18 }}>🥉</Text>
-                                </View>
+                                <View style={[styles.podiumAvatar, { backgroundColor: '#f9730020', width: 46, height: 46, borderRadius: 23 }]}><Text style={{ fontSize: 18 }}>🥉</Text></View>
                                 <Text style={styles.podiumName} numberOfLines={1}>{(leaders[2]?.agentName || '').split(' ')[0]}</Text>
                                 <Text style={styles.podiumCalls}>{leaders[2]?.totalCalls} calls</Text>
                                 <View style={[styles.podiumBar, { height: 40, backgroundColor: '#f9730020' }]} />
@@ -124,63 +83,27 @@ export default function LeaderboardScreen() {
                         </View>
                     )}
 
-                    {/* Full list */}
                     {leaders.map((agent, idx) => (
-                        <View
-                            key={agent._id || idx}
-                            style={[styles.leaderCard,
-                            idx === 0 ? { borderLeftColor: '#f59e0b', borderLeftWidth: 3, backgroundColor: '#f59e0b10' } :
-                                idx === 1 ? { borderLeftColor: '#94a3b8', borderLeftWidth: 3 } :
-                                    idx === 2 ? { borderLeftColor: '#f97316', borderLeftWidth: 3 } :
-                                        {}
-                            ]}
-                        >
-                            {/* Rank */}
+                        <View key={agent._id || idx} style={[styles.leaderCard, idx === 0 ? { borderLeftColor: '#f59e0b', borderLeftWidth: 3, backgroundColor: '#f59e0b10' } : idx === 1 ? { borderLeftColor: '#94a3b8', borderLeftWidth: 3 } : idx === 2 ? { borderLeftColor: '#f97316', borderLeftWidth: 3 } : {}]}>
                             <View style={styles.rankBadge}>
-                                {idx < 3
-                                    ? <Text style={{ fontSize: 20 }}>{medals[idx]}</Text>
-                                    : <Text style={styles.rankNumber}>#{idx + 1}</Text>
-                                }
+                                {idx < 3 ? <Text style={{ fontSize: 20 }}>{medals[idx]}</Text> : <Text style={styles.rankNumber}>#{idx + 1}</Text>}
                             </View>
-
-                            {/* Avatar */}
                             <View style={[styles.avatar, { backgroundColor: avatarColors[idx % avatarColors.length] + '30' }]}>
-                                <Text style={[styles.avatarText, { color: avatarColors[idx % avatarColors.length] }]}>
-                                    {(agent.agentName || 'U').charAt(0).toUpperCase()}
-                                </Text>
+                                <Text style={[styles.avatarText, { color: avatarColors[idx % avatarColors.length] }]}>{(agent.agentName || 'U').charAt(0).toUpperCase()}</Text>
                             </View>
-
-                            {/* Info */}
                             <View style={styles.agentInfo}>
-                                {/* Backend field: agentName */}
                                 <Text style={styles.agentName}>{agent.agentName}</Text>
-                                {/* Backend field: agentEmail */}
                                 <Text style={styles.agentEmail} numberOfLines={1}>{agent.agentEmail}</Text>
                             </View>
-
-                            {/* Stats */}
                             <View style={styles.statsCol}>
-                                {/* Backend field: totalCalls */}
-                                <View style={styles.statItem}>
-                                    <Text style={[styles.statValue, { color: '#6366f1' }]}>{agent.totalCalls}</Text>
-                                    <Text style={styles.statLabel}>Calls</Text>
-                                </View>
-                                {/* Backend field: salesDone */}
-                                <View style={styles.statItem}>
-                                    <Text style={[styles.statValue, { color: '#22c55e' }]}>{agent.salesDone}</Text>
-                                    <Text style={styles.statLabel}>Sales</Text>
-                                </View>
-                                {/* Backend field: totalDuration (in seconds) */}
-                                <View style={styles.statItem}>
-                                    <Text style={[styles.statValue, { color: '#8b5cf6' }]}>{fmtDuration(agent.totalDuration)}</Text>
-                                    <Text style={styles.statLabel}>Time</Text>
-                                </View>
+                                <View style={styles.statItem}><Text style={[styles.statValue, { color: '#6366f1' }]}>{agent.totalCalls}</Text><Text style={styles.statLabel}>Calls</Text></View>
+                                <View style={styles.statItem}><Text style={[styles.statValue, { color: '#22c55e' }]}>{agent.salesDone}</Text><Text style={styles.statLabel}>Sales</Text></View>
+                                <View style={styles.statItem}><Text style={[styles.statValue, { color: '#8b5cf6' }]}>{fmtDuration(agent.totalDuration)}</Text><Text style={styles.statLabel}>Time</Text></View>
                             </View>
                         </View>
                     ))}
                 </View>
             )}
-
             <View style={{ height: 30 }} />
         </ScrollView>
     );
@@ -189,10 +112,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0f172a' },
     center: { paddingTop: 80, alignItems: 'center' },
-    header: {
-        padding: 20, paddingTop: 50, backgroundColor: '#1e293b',
-        borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 16,
-    },
+    header: { padding: 20, paddingTop: 50, backgroundColor: '#1e293b', borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 16 },
     title: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
     subtitle: { color: '#94a3b8', fontSize: 13, marginTop: 4 },
     toggleRow: { flexDirection: 'row', backgroundColor: '#1e293b', marginHorizontal: 16, borderRadius: 12, padding: 4, marginBottom: 16 },
@@ -200,25 +120,16 @@ const styles = StyleSheet.create({
     toggleBtnActive: { backgroundColor: '#6366f1' },
     toggleText: { color: '#64748b', fontWeight: '600', fontSize: 14 },
     toggleTextActive: { color: '#fff' },
-    errorText: { color: '#ef4444', fontSize: 15 },
-    retryText: { color: '#ef4444', fontWeight: '600', fontSize: 14 },
-    emptyIcon: { fontSize: 48, marginBottom: 12 },
-    emptyText: { color: '#64748b', fontSize: 16 },
+    errorText: { color: '#ef4444', fontSize: 15 }, retryText: { color: '#ef4444', fontWeight: '600', fontSize: 14 },
+    emptyIcon: { fontSize: 48, marginBottom: 12 }, emptyText: { color: '#64748b', fontSize: 16 },
     list: { paddingHorizontal: 16 },
-    podium: {
-        flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end',
-        backgroundColor: '#1e293b', marginHorizontal: 0, marginBottom: 16,
-        borderRadius: 16, padding: 20, gap: 16,
-    },
+    podium: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', backgroundColor: '#1e293b', marginHorizontal: 0, marginBottom: 16, borderRadius: 16, padding: 20, gap: 16 },
     podiumItem: { flex: 1, alignItems: 'center', gap: 4 },
     podiumAvatar: { justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
     podiumName: { color: '#94a3b8', fontSize: 12, fontWeight: '600', textAlign: 'center' },
     podiumCalls: { color: '#64748b', fontSize: 11, textAlign: 'center' },
     podiumBar: { width: '70%', borderTopLeftRadius: 4, borderTopRightRadius: 4, marginTop: 8 },
-    leaderCard: {
-        backgroundColor: '#1e293b', borderRadius: 14, padding: 14,
-        flexDirection: 'row', alignItems: 'center', marginBottom: 8,
-    },
+    leaderCard: { backgroundColor: '#1e293b', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
     rankBadge: { width: 36, alignItems: 'center' },
     rankNumber: { color: '#475569', fontWeight: 'bold', fontSize: 14 },
     avatar: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginHorizontal: 10 },
