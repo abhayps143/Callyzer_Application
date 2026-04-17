@@ -6,7 +6,6 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 
-// ── Helper ─────────────────────────────────────────────────────
 const fmtDuration = (s) => {
     if (!s) return '0s';
     const m = Math.floor(s / 60);
@@ -19,16 +18,6 @@ const fmtTime = (d) => {
     return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
-// ── Stat Card ──────────────────────────────────────────────────
-const StatCard = ({ title, value, icon, color }) => (
-    <View style={[styles.card, { borderLeftColor: color }]}>
-        <Text style={styles.cardIcon}>{icon}</Text>
-        <Text style={styles.cardValue}>{value ?? '0'}</Text>
-        <Text style={styles.cardTitle}>{title}</Text>
-    </View>
-);
-
-// ── Status Badge ───────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
     const cfg = {
         Connected: { bg: '#22c55e20', color: '#22c55e' },
@@ -43,6 +32,34 @@ const StatusBadge = ({ status }) => {
     );
 };
 
+const TypeBadge = ({ type }) => {
+    const isIncoming = type === 'Incoming';
+    return (
+        <View style={[styles.badge, { backgroundColor: isIncoming ? '#3b82f620' : '#8b5cf620' }]}>
+            <Text style={[styles.badgeText, { color: isIncoming ? '#3b82f6' : '#8b5cf6' }]}>
+                {isIncoming ? '↙ Incoming' : '↗ Outgoing'}
+            </Text>
+        </View>
+    );
+};
+
+const SummaryCard = ({ title, value, change, up, icon, color }) => (
+    <View style={[styles.summaryCard, { borderLeftColor: color }]}>
+        <View style={styles.summaryCardHeader}>
+            <View style={[styles.summaryIconBox, { backgroundColor: color + '20' }]}>
+                <Text style={[styles.summaryIcon, { color }]}>{icon}</Text>
+            </View>
+            <View style={[styles.changeBadge, { backgroundColor: up ? '#22c55e20' : '#ef444420' }]}>
+                <Text style={[styles.changeText, { color: up ? '#22c55e' : '#ef4444' }]}>
+                    {up ? '↑' : '↓'} {change}
+                </Text>
+            </View>
+        </View>
+        <Text style={styles.summaryValue}>{value}</Text>
+        <Text style={styles.summaryLabel}>{title}</Text>
+    </View>
+);
+
 export default function DashboardScreen() {
     const { user, logout } = useContext(AuthContext);
     const [data, setData] = useState(null);
@@ -54,21 +71,15 @@ export default function DashboardScreen() {
     const fetchData = useCallback(async () => {
         setError('');
         try {
-            // Both calls at same time
             const [dashRes, progressRes] = await Promise.allSettled([
                 api.getDashboardStats(),
                 api.getMyProgress(),
             ]);
 
-            if (dashRes.status === 'fulfilled') {
-                setData(dashRes.value);
-            } else {
-                setError('Dashboard load nahi hua');
-            }
+            if (dashRes.status === 'fulfilled') setData(dashRes.value);
+            else setError('Dashboard load nahi hua');
 
-            if (progressRes.status === 'fulfilled') {
-                setProgress(progressRes.value);
-            }
+            if (progressRes.status === 'fulfilled') setProgress(progressRes.value);
         } catch (e) {
             setError('Server se connect nahi ho pa raha');
         } finally {
@@ -90,19 +101,23 @@ export default function DashboardScreen() {
         );
     }
 
-    // Backend se aane wala data structure (website ke same)
-    // data.summary = { totalCalls, incomingCalls, outgoingCalls, missedCalls, connectedCalls, connectRate, avgDuration }
-    // data.weeklyTrend = [{ day, total, incoming, outgoing, missed }]
-    // data.recentCalls = [{ name, number, type, status, duration, time, avatar }]
-    // data.topAgents = [{ name, calls, connected, avatar, color }]
     const { summary, weeklyTrend, recentCalls, topAgents } = data || {};
+
+    const summaryCards = summary ? [
+        { title: 'Total Calls', value: summary.totalCalls?.toLocaleString() || '0', change: `${summary.connectRate || 0}%`, up: true, icon: '📞', color: '#6366f1' },
+        { title: 'Incoming', value: summary.incomingCalls?.toLocaleString() || '0', change: '+8%', up: true, icon: '↙️', color: '#3b82f6' },
+        { title: 'Outgoing', value: summary.outgoingCalls?.toLocaleString() || '0', change: '+3%', up: true, icon: '↗️', color: '#8b5cf6' },
+        { title: 'Missed', value: summary.missedCalls?.toLocaleString() || '0', change: '-4.6%', up: false, icon: '❌', color: '#ef4444' },
+    ] : [];
+
+    const maxTotal = weeklyTrend ? Math.max(...weeklyTrend.map(d => d.total), 1) : 1;
 
     return (
         <ScrollView
             style={styles.container}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
         >
-            {/* ── Header ── */}
+            {/* Header */}
             <View style={styles.header}>
                 <View>
                     <Text style={styles.welcome}>Welcome back 👋</Text>
@@ -123,18 +138,15 @@ export default function DashboardScreen() {
                 </View>
             ) : null}
 
-            {/* ── Summary Stats ── */}
+            {/* Summary Cards */}
             <Text style={styles.sectionTitle}>Today's Overview</Text>
-            <View style={styles.grid}>
-                <StatCard title="Total Calls" value={summary?.totalCalls} icon="📞" color="#6366f1" />
-                <StatCard title="Connected" value={summary?.connectedCalls} icon="✅" color="#22c55e" />
-                <StatCard title="Missed" value={summary?.missedCalls} icon="❌" color="#ef4444" />
-                <StatCard title="Incoming" value={summary?.incomingCalls} icon="↙️" color="#3b82f6" />
-                <StatCard title="Outgoing" value={summary?.outgoingCalls} icon="↗️" color="#8b5cf6" />
-                <StatCard title="Avg Duration" value={summary?.avgDuration || '0s'} icon="⏱️" color="#f59e0b" />
+            <View style={styles.summaryGrid}>
+                {summaryCards.map((card, i) => (
+                    <SummaryCard key={i} {...card} />
+                ))}
             </View>
 
-            {/* ── Connect Rate ── */}
+            {/* Connect Rate */}
             {summary?.connectRate !== undefined && (
                 <View style={styles.rateCard}>
                     <Text style={styles.rateLabel}>Connect Rate</Text>
@@ -145,11 +157,10 @@ export default function DashboardScreen() {
                 </View>
             )}
 
-            {/* ── Target Progress ── */}
+            {/* Progress Cards */}
             {progress && (
-                <View style={styles.progressSection}>
+                <View>
                     <Text style={styles.sectionTitle}>Target Progress</Text>
-                    {/* Daily */}
                     <View style={styles.progressCard}>
                         <View style={styles.progressHeader}>
                             <Text style={styles.progressLabel}>🎯 Today's Target</Text>
@@ -160,7 +171,6 @@ export default function DashboardScreen() {
                         </View>
                         <Text style={styles.progressPct}>{progress.daily?.percentage || 0}% completed</Text>
                     </View>
-                    {/* Monthly */}
                     <View style={styles.progressCard}>
                         <View style={styles.progressHeader}>
                             <Text style={styles.progressLabel}>📊 Monthly Target</Text>
@@ -174,53 +184,18 @@ export default function DashboardScreen() {
                 </View>
             )}
 
-            {/* ── Weekly Chart (Simple Bars) ── */}
+            {/* Weekly Bar Chart */}
             {weeklyTrend && weeklyTrend.length > 0 && (
-                <View style={styles.section}>
+                <View style={styles.chartCard}>
                     <Text style={styles.sectionTitle}>Weekly Activity</Text>
-                    <View style={styles.chartCard}>
-                        <View style={styles.chartBars}>
-                            {weeklyTrend.map((d, i) => {
-                                const maxTotal = Math.max(...weeklyTrend.map(x => x.total), 1);
-                                const height = Math.max(((d.total / maxTotal) * 80), 4);
-                                return (
-                                    <View key={i} style={styles.barColumn}>
-                                        <Text style={styles.barValue}>{d.total}</Text>
-                                        <View style={[styles.bar, { height }]} />
-                                        <Text style={styles.barLabel}>{d.day}</Text>
-                                    </View>
-                                );
-                            })}
-                        </View>
-                        <View style={styles.chartLegend}>
-                            <View style={styles.legendItem}>
-                                <View style={[styles.legendDot, { backgroundColor: '#6366f1' }]} />
-                                <Text style={styles.legendText}>Total calls per day</Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-            )}
-
-            {/* ── Top Agents ── */}
-            {topAgents && topAgents.length > 0 && (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Top Agents</Text>
-                    <View style={styles.agentCard}>
-                        {topAgents.slice(0, 5).map((agent, i) => {
-                            const rate = agent.calls > 0 ? Math.round((agent.connected / agent.calls) * 100) : 0;
+                    <View style={styles.chartBars}>
+                        {weeklyTrend.map((d, i) => {
+                            const height = Math.max(((d.total / maxTotal) * 80), 4);
                             return (
-                                <View key={i} style={styles.agentRow}>
-                                    <View style={[styles.agentAvatar, { backgroundColor: agent.color || '#6366f1' }]}>
-                                        <Text style={styles.agentAvatarText}>{agent.avatar || (agent.name || 'U').charAt(0)}</Text>
-                                    </View>
-                                    <View style={styles.agentInfo}>
-                                        <Text style={styles.agentName}>{agent.name}</Text>
-                                        <View style={styles.agentBarBg}>
-                                            <View style={[styles.agentBarFill, { width: `${rate}%`, backgroundColor: agent.color || '#6366f1' }]} />
-                                        </View>
-                                    </View>
-                                    <Text style={styles.agentRate}>{rate}%</Text>
+                                <View key={i} style={styles.barColumn}>
+                                    <Text style={styles.barValue}>{d.total}</Text>
+                                    <View style={[styles.bar, { height }]} />
+                                    <Text style={styles.barLabel}>{d.day}</Text>
                                 </View>
                             );
                         })}
@@ -228,27 +203,49 @@ export default function DashboardScreen() {
                 </View>
             )}
 
-            {/* ── Recent Calls ── */}
-            {recentCalls && recentCalls.length > 0 && (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Recent Calls</Text>
-                    <View style={styles.recentCard}>
-                        {recentCalls.slice(0, 8).map((call, i) => (
-                            <View key={i} style={[styles.recentRow, i < recentCalls.length - 1 && styles.recentBorder]}>
-                                <View style={styles.recentAvatar}>
-                                    <Text style={styles.recentAvatarText}>{call.avatar || (call.name || 'U').charAt(0)}</Text>
+            {/* Top Agents */}
+            {topAgents && topAgents.length > 0 && (
+                <View style={styles.agentCard}>
+                    <Text style={styles.sectionTitle}>Top Agents</Text>
+                    {topAgents.slice(0, 5).map((agent, i) => {
+                        const rate = agent.calls > 0 ? Math.round((agent.connected / agent.calls) * 100) : 0;
+                        return (
+                            <View key={i} style={styles.agentRow}>
+                                <View style={[styles.agentAvatar, { backgroundColor: agent.color || '#6366f1' }]}>
+                                    <Text style={styles.agentAvatarText}>{agent.avatar || (agent.name || 'U').charAt(0)}</Text>
                                 </View>
-                                <View style={styles.recentInfo}>
-                                    <Text style={styles.recentName}>{call.name || 'Unknown'}</Text>
-                                    <Text style={styles.recentNumber}>{call.number}</Text>
+                                <View style={styles.agentInfo}>
+                                    <Text style={styles.agentName}>{agent.name}</Text>
+                                    <View style={styles.agentBarBg}>
+                                        <View style={[styles.agentBarFill, { width: `${rate}%`, backgroundColor: agent.color || '#6366f1' }]} />
+                                    </View>
                                 </View>
-                                <View style={styles.recentRight}>
-                                    <StatusBadge status={call.status} />
-                                    <Text style={styles.recentTime}>{call.time || fmtTime(call.calledAt)}</Text>
-                                </View>
+                                <Text style={styles.agentRate}>{rate}%</Text>
                             </View>
-                        ))}
-                    </View>
+                        );
+                    })}
+                </View>
+            )}
+
+            {/* Recent Calls */}
+            {recentCalls && recentCalls.length > 0 && (
+                <View style={styles.recentCard}>
+                    <Text style={styles.sectionTitle}>Recent Calls</Text>
+                    {recentCalls.slice(0, 8).map((call, i) => (
+                        <View key={i} style={[styles.recentRow, i < recentCalls.length - 1 && styles.recentBorder]}>
+                            <View style={styles.recentAvatar}>
+                                <Text style={styles.recentAvatarText}>{call.avatar || (call.name || 'U').charAt(0)}</Text>
+                            </View>
+                            <View style={styles.recentInfo}>
+                                <Text style={styles.recentName}>{call.name || 'Unknown'}</Text>
+                                <Text style={styles.recentNumber}>{call.number}</Text>
+                            </View>
+                            <View style={styles.recentRight}>
+                                <StatusBadge status={call.status} />
+                                <Text style={styles.recentTime}>{call.time || fmtTime(call.calledAt)}</Text>
+                            </View>
+                        </View>
+                    ))}
                 </View>
             )}
 
@@ -271,24 +268,27 @@ const styles = StyleSheet.create({
     userRole: { color: '#6366f1', fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
     logoutBtn: { backgroundColor: '#ef444420', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
     logoutText: { color: '#ef4444', fontWeight: '600' },
-    errorBox: { backgroundColor: '#ef444420', margin: 16, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#ef4444' },
+    errorBox: { backgroundColor: '#ef444420', margin: 16, padding: 14, borderRadius: 12 },
     errorText: { color: '#ef4444', fontSize: 14 },
     retryText: { color: '#ef4444', fontWeight: '600', marginTop: 8 },
     sectionTitle: { color: '#94a3b8', fontSize: 13, fontWeight: '600', paddingHorizontal: 16, marginBottom: 10, marginTop: 4 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10 },
-    card: {
-        backgroundColor: '#1e293b', borderRadius: 12, padding: 16,
-        margin: 6, width: '44%', borderLeftWidth: 4,
+    summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10 },
+    summaryCard: {
+        backgroundColor: '#1e293b', borderRadius: 12, padding: 14,
+        margin: 6, width: '44%', borderLeftWidth: 3,
     },
-    cardIcon: { fontSize: 24, marginBottom: 8 },
-    cardValue: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-    cardTitle: { color: '#64748b', fontSize: 12, marginTop: 4 },
-    rateCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 4, padding: 16, borderRadius: 12 },
+    summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    summaryIconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    summaryIcon: { fontSize: 20 },
+    changeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+    changeText: { fontSize: 11, fontWeight: '600' },
+    summaryValue: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+    summaryLabel: { color: '#64748b', fontSize: 11, marginTop: 4 },
+    rateCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 8, padding: 16, borderRadius: 12 },
     rateLabel: { color: '#94a3b8', fontSize: 13, marginBottom: 8 },
     rateBarBg: { backgroundColor: '#0f172a', borderRadius: 4, height: 8, marginBottom: 6 },
     rateBarFill: { backgroundColor: '#6366f1', height: 8, borderRadius: 4 },
     rateValue: { color: '#6366f1', fontWeight: 'bold', fontSize: 16 },
-    progressSection: { marginTop: 8 },
     progressCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 8, padding: 16, borderRadius: 12 },
     progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
     progressLabel: { color: '#fff', fontWeight: '600', fontSize: 14 },
@@ -296,18 +296,13 @@ const styles = StyleSheet.create({
     progressBarBg: { backgroundColor: '#0f172a', borderRadius: 4, height: 8, marginBottom: 6 },
     progressBarFill: { height: 8, borderRadius: 4 },
     progressPct: { color: '#64748b', fontSize: 12 },
-    section: { marginTop: 8 },
-    chartCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12 },
+    chartCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 8 },
     chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 110, justifyContent: 'space-between' },
     barColumn: { flex: 1, alignItems: 'center', gap: 4 },
     barValue: { color: '#64748b', fontSize: 10, marginBottom: 4 },
     bar: { width: 20, backgroundColor: '#6366f1', borderRadius: 4, minHeight: 4 },
     barLabel: { color: '#64748b', fontSize: 11, marginTop: 4 },
-    chartLegend: { flexDirection: 'row', marginTop: 12, gap: 16 },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    legendDot: { width: 8, height: 8, borderRadius: 4 },
-    legendText: { color: '#64748b', fontSize: 12 },
-    agentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12 },
+    agentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 8 },
     agentRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
     agentAvatar: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
     agentAvatarText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
@@ -316,7 +311,7 @@ const styles = StyleSheet.create({
     agentBarBg: { backgroundColor: '#0f172a', borderRadius: 3, height: 6 },
     agentBarFill: { height: 6, borderRadius: 3 },
     agentRate: { color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginLeft: 8 },
-    recentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, borderRadius: 12, overflow: 'hidden' },
+    recentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
     recentRow: { flexDirection: 'row', alignItems: 'center', padding: 14 },
     recentBorder: { borderBottomWidth: 1, borderBottomColor: '#0f172a' },
     recentAvatar: { width: 36, height: 36, backgroundColor: '#6366f120', borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
