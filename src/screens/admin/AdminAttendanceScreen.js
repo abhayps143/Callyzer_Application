@@ -6,10 +6,10 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 //Vianayk IP-Adress
-// const API = 'http://192.168.1.65:5000/api';
+const API = 'http://192.168.1.65:5000/api';
 
 //Abhay IP-Adress
-const API = 'http://192.168.1.51:5000/api';
+// const API = 'http://192.168.1.51:5000/api';
 
 const STATUS_CONFIG = {
   present: { label: 'Present', color: '#10B981', bg: '#D1FAE5' },

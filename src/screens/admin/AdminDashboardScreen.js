@@ -7,10 +7,10 @@ import { AuthContext } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 //Vianayk IP-Adress
-// const API = 'http://192.168.1.65:5000/api';
+const API = 'http://192.168.1.65:5000/api';
 
 //Abhay IP-Adress
-const API = 'http://192.168.1.51:5000/api';
+// const API = 'http://192.168.1.51:5000/api';
 
 const { width } = Dimensions.get('window');
 

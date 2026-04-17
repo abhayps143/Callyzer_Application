@@ -8,7 +8,10 @@
 // } from 'react-native';
 // import { AuthContext } from '../context/AuthContext';
 
+// // ── All Screens ───────────────────────────────────────────────
 // import LoginScreen from '../screens/LoginScreen';
+
+// // Employee Screens
 // import DashboardScreen from '../screens/DashboardScreen';
 // import CallLogsScreen from '../screens/CallLogsScreen';
 // import AttendanceScreen from '../screens/AttendanceScreen';
@@ -29,46 +32,25 @@
 // import HrEmployeesScreen from '../screens/hr/HrEmployeesScreen';
 // import HrAttendanceScreen from '../screens/hr/HrAttendanceScreen';
 
-
 // const Stack = createStackNavigator();
 // const { width } = Dimensions.get('window');
 // const DRAWER_WIDTH = width * 0.75;
 
-// // ── Animated Menu Component ──
+// // ── Animated Drawer ────────────────────────────────────────────
 // const AnimatedDrawer = ({ visible, onClose, children }) => {
 //     const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 //     const opacity = useRef(new Animated.Value(0)).current;
 
 //     useEffect(() => {
 //         if (visible) {
-//             // Open drawer
 //             Animated.parallel([
-//                 Animated.timing(translateX, {
-//                     toValue: 0,
-//                     duration: 300,
-//                     easing: Easing.bezier(0.5, 0.01, 0, 1),
-//                     useNativeDriver: true,
-//                 }),
-//                 Animated.timing(opacity, {
-//                     toValue: 0.5,
-//                     duration: 300,
-//                     useNativeDriver: true,
-//                 }),
+//                 Animated.timing(translateX, { toValue: 0, duration: 300, easing: Easing.bezier(0.5, 0.01, 0, 1), useNativeDriver: true }),
+//                 Animated.timing(opacity, { toValue: 0.5, duration: 300, useNativeDriver: true }),
 //             ]).start();
 //         } else {
-//             // Close drawer
 //             Animated.parallel([
-//                 Animated.timing(translateX, {
-//                     toValue: -DRAWER_WIDTH,
-//                     duration: 300,
-//                     easing: Easing.bezier(0.5, 0.01, 0, 1),
-//                     useNativeDriver: true,
-//                 }),
-//                 Animated.timing(opacity, {
-//                     toValue: 0,
-//                     duration: 300,
-//                     useNativeDriver: true,
-//                 }),
+//                 Animated.timing(translateX, { toValue: -DRAWER_WIDTH, duration: 300, easing: Easing.bezier(0.5, 0.01, 0, 1), useNativeDriver: true }),
+//                 Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
 //             ]).start();
 //         }
 //     }, [visible]);
@@ -85,12 +67,14 @@
 //     );
 // };
 
-// // ── Custom Header with Menu Button ──
+// // ── Custom Header ──────────────────────────────────────────────
 // function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
 //     const [menuVisible, setMenuVisible] = useState(false);
-//     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
-//     const menuItems = isAdmin ? [
+//     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+//     const isHr = user?.role === 'hr';
+
+//     const adminMenu = [
 //         { id: 'dashboard', screenName: 'AdminDashboard', label: ' Dashboard', icon: '🏠' },
 //         { id: 'users', screenName: 'AdminUsers', label: ' Users', icon: '👥' },
 //         { id: 'leaves', screenName: 'AdminLeaves', label: ' Leave Requests', icon: '📋' },
@@ -98,7 +82,16 @@
 //         { id: 'callLogs', screenName: 'CallLogs', label: ' Call Logs', icon: '📞' },
 //         { id: 'reports', screenName: 'Reports', label: ' Reports', icon: '📊' },
 //         { id: 'settings', screenName: 'AdminSettings', label: ' Settings', icon: '⚙️' },
-//     ] : [
+//     ];
+
+//     const hrMenu = [
+//         { id: 'dashboard', screenName: 'HrDashboard', label: ' Dashboard', icon: '🏠' },
+//         { id: 'employees', screenName: 'HrEmployees', label: ' Employees', icon: '👥' },
+//         { id: 'leaves', screenName: 'HrLeaves', label: ' Leave Requests', icon: '📋' },
+//         { id: 'attendance', screenName: 'HrAttendance', label: ' Attendance', icon: '📍' },
+//     ];
+
+//     const employeeMenu = [
 //         { id: 'dashboard', screenName: 'Dashboard', label: '🏠 Dashboard', icon: '🏠' },
 //         { id: 'calls', screenName: 'CallLogs', label: '📞 Call Logs', icon: '📞' },
 //         { id: 'attendance', screenName: 'Attendance', label: '📍 Attendance', icon: '📍' },
@@ -107,47 +100,45 @@
 //         { id: 'leaves', screenName: 'EmployeeLeaves', label: '🗓️ My Leaves', icon: '🗓️' },
 //     ];
 
+//     const menuItems = isAdmin ? adminMenu : isHr ? hrMenu : employeeMenu;
+
 //     const handleNavigation = (screenName) => {
 //         setMenuVisible(false);
-//         setTimeout(() => {
-//             navigation.navigate(screenName);
-//         }, 150);
+//         setTimeout(() => navigation.navigate(screenName), 150);
 //     };
 
 //     const handleLogout = () => {
 //         setMenuVisible(false);
-//         setTimeout(() => {
-//             onLogout();
-//         }, 150);
+//         setTimeout(() => onLogout(), 150);
 //     };
+
+//     // Role color for header
+//     const roleColor = isAdmin ? '#6366f1' : isHr ? '#eab308' : '#22c55e';
 
 //     return (
 //         <>
-//             <View style={headerStyles.container}>
-//                 <TouchableOpacity
-//                     onPress={() => setMenuVisible(true)}
-//                     style={headerStyles.menuBtn}
-//                     activeOpacity={0.7}
-//                 >
+//             <View style={[headerStyles.container, { borderBottomColor: roleColor + '40' }]}>
+//                 <TouchableOpacity onPress={() => setMenuVisible(true)} style={headerStyles.menuBtn} activeOpacity={0.7}>
 //                     <Text style={headerStyles.menuIcon}>☰</Text>
 //                 </TouchableOpacity>
 //                 <Text style={headerStyles.title}>{title}</Text>
 //                 <View style={headerStyles.placeholder} />
 //             </View>
 
-//             {/* Animated Drawer */}
 //             {menuVisible && (
 //                 <AnimatedDrawer visible={menuVisible} onClose={() => setMenuVisible(false)}>
 //                     <SafeAreaView style={drawerStyles.safeArea}>
 //                         {/* Header */}
 //                         <View style={drawerStyles.header}>
-//                             <View style={drawerStyles.avatar}>
-//                                 <Text style={drawerStyles.avatarText}>{(user?.name || 'U').charAt(0).toUpperCase()}</Text>
+//                             <View style={[drawerStyles.avatar, { backgroundColor: roleColor + '30' }]}>
+//                                 <Text style={[drawerStyles.avatarText, { color: roleColor }]}>
+//                                     {(user?.name || 'U').charAt(0).toUpperCase()}
+//                                 </Text>
 //                             </View>
 //                             <Text style={drawerStyles.userName}>{user?.name || 'User'}</Text>
 //                             <Text style={drawerStyles.userEmail}>{user?.email || ''}</Text>
-//                             <View style={drawerStyles.roleBadge}>
-//                                 <Text style={drawerStyles.roleText}>{user?.role || 'agent'}</Text>
+//                             <View style={[drawerStyles.roleBadge, { backgroundColor: roleColor + '20' }]}>
+//                                 <Text style={[drawerStyles.roleText, { color: roleColor }]}>{user?.role || 'agent'}</Text>
 //                             </View>
 //                         </View>
 
@@ -158,7 +149,7 @@
 //                                     key={item.id}
 //                                     style={[
 //                                         drawerStyles.menuItem,
-//                                         currentRoute === item.screenName && drawerStyles.menuItemActive
+//                                         currentRoute === item.screenName && [drawerStyles.menuItemActive, { backgroundColor: roleColor + '20' }]
 //                                     ]}
 //                                     onPress={() => handleNavigation(item.screenName)}
 //                                     activeOpacity={0.6}
@@ -166,7 +157,7 @@
 //                                     <Text style={drawerStyles.menuIcon}>{item.icon}</Text>
 //                                     <Text style={[
 //                                         drawerStyles.menuLabel,
-//                                         currentRoute === item.screenName && drawerStyles.menuLabelActive
+//                                         currentRoute === item.screenName && [drawerStyles.menuLabelActive, { color: roleColor }]
 //                                     ]}>
 //                                         {item.label}
 //                                     </Text>
@@ -175,11 +166,7 @@
 //                         </ScrollView>
 
 //                         {/* Logout */}
-//                         <TouchableOpacity
-//                             style={drawerStyles.logoutBtn}
-//                             onPress={handleLogout}
-//                             activeOpacity={0.6}
-//                         >
+//                         <TouchableOpacity style={drawerStyles.logoutBtn} onPress={handleLogout} activeOpacity={0.6}>
 //                             <Text style={drawerStyles.logoutIcon}>🚪</Text>
 //                             <Text style={drawerStyles.logoutText}>Logout</Text>
 //                         </TouchableOpacity>
@@ -190,160 +177,46 @@
 //     );
 // }
 
-// const styles = StyleSheet.create({
-//     backdrop: {
-//         position: 'absolute',
-//         top: 0,
-//         left: 0,
-//         right: 0,
-//         bottom: 0,
-//         backgroundColor: '#000',
-//         zIndex: 999,
-//     },
-//     drawer: {
-//         position: 'absolute',
-//         top: 0,
-//         left: 0,
-//         bottom: 0,
-//         width: DRAWER_WIDTH,
-//         backgroundColor: '#0f172a',
-//         zIndex: 1000,
-//         elevation: 10,
-//         shadowColor: '#000',
-//         shadowOffset: { width: 2, height: 0 },
-//         shadowOpacity: 0.3,
-//         shadowRadius: 10,
-//     },
-// });
-
-// const headerStyles = StyleSheet.create({
-//     container: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         justifyContent: 'space-between',
-//         backgroundColor: '#1e293b',
-//         paddingHorizontal: 16,
-//         paddingVertical: 12,
-//         paddingTop: 48,
-//     },
-//     menuBtn: {
-//         padding: 8,
-//     },
-//     menuIcon: {
-//         fontSize: 24,
-//         color: '#fff',
-//     },
-//     title: {
-//         fontSize: 18,
-//         fontWeight: 'bold',
-//         color: '#fff',
-//     },
-//     placeholder: {
-//         width: 40,
-//     },
-// });
-
-// const drawerStyles = StyleSheet.create({
-//     safeArea: {
-//         flex: 1,
-//     },
-//     header: {
-//         backgroundColor: '#1e293b',
-//         padding: 20,
-//         alignItems: 'center',
-//         borderBottomWidth: 1,
-//         borderBottomColor: '#334155',
-//     },
-//     avatar: {
-//         width: 70,
-//         height: 70,
-//         borderRadius: 35,
-//         backgroundColor: '#6366f1',
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//         marginBottom: 12,
-//     },
-//     avatarText: {
-//         color: '#fff',
-//         fontSize: 28,
-//         fontWeight: 'bold',
-//     },
-//     userName: {
-//         color: '#fff',
-//         fontSize: 16,
-//         fontWeight: 'bold',
-//         marginBottom: 4,
-//     },
-//     userEmail: {
-//         color: '#94a3b8',
-//         fontSize: 12,
-//         marginBottom: 8,
-//     },
-//     roleBadge: {
-//         backgroundColor: '#6366f120',
-//         paddingHorizontal: 12,
-//         paddingVertical: 4,
-//         borderRadius: 20,
-//     },
-//     roleText: {
-//         color: '#6366f1',
-//         fontSize: 12,
-//         textTransform: 'capitalize',
-//     },
-//     menuContainer: {
-//         flex: 1,
-//         paddingTop: 16,
-//     },
-//     menuItem: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         paddingVertical: 14,
-//         paddingHorizontal: 20,
-//         marginHorizontal: 8,
-//         borderRadius: 12,
-//         marginBottom: 4,
-//     },
-//     menuItemActive: {
-//         backgroundColor: '#6366f120',
-//     },
-//     menuIcon: {
-//         fontSize: 22,
-//         width: 32,
-//         color: '#cbd5e1',
-//     },
-//     menuLabel: {
-//         fontSize: 15,
-//         color: '#cbd5e1',
-//         fontWeight: '500',
-//     },
-//     menuLabelActive: {
-//         color: '#6366f1',
-//         fontWeight: 'bold',
-//     },
-//     logoutBtn: {
-//         flexDirection: 'row',
-//         alignItems: 'center',
-//         padding: 16,
-//         margin: 16,
-//         backgroundColor: '#ef444420',
-//         borderRadius: 12,
-//         marginBottom: 30,
-//     },
-//     logoutIcon: {
-//         fontSize: 20,
-//         marginRight: 12,
-//     },
-//     logoutText: {
-//         color: '#ef4444',
-//         fontSize: 15,
-//         fontWeight: '600',
-//     },
-// });
-
-// // ── User Stack Navigator ──
-// function UserStack() {
+// // ── Helper: Wrapped Screen ────────────────────────────────────
+// const wrap = (Component, screenTitle) => (props) => {
 //     const { user, logout } = useContext(AuthContext);
-//     const [currentRoute, setCurrentRoute] = useState('Dashboard');
+//     const [currentRoute, setCurrentRoute] = useState(screenTitle);
+
+//     return (
+//         <>
+//             <CustomHeader
+//                 navigation={props.navigation}
+//                 title={screenTitle}
+//                 user={user}
+//                 onLogout={logout}
+//                 currentRoute={currentRoute}
+//             />
+//             <Component {...props} />
+//         </>
+//     );
+// };
+
+// // ── HR Stack ──────────────────────────────────────────────────
+// function HrStack() {
+//     const { user, logout } = useContext(AuthContext);
+//     const [currentRoute, setCurrentRoute] = useState('HrDashboard');
+
+//     const screen = (name, Component, title) => (
+//         <Stack.Screen name={name} key={name}>
+//             {(props) => (
+//                 <>
+//                     <CustomHeader
+//                         navigation={props.navigation}
+//                         title={title}
+//                         user={user}
+//                         onLogout={logout}
+//                         currentRoute={currentRoute}
+//                     />
+//                     <Component {...props} />
+//                 </>
+//             )}
+//         </Stack.Screen>
+//     );
 
 //     return (
 //         <Stack.Navigator
@@ -351,214 +224,99 @@
 //             screenListeners={{
 //                 state: (e) => {
 //                     const routes = e.data.state.routes;
-//                     if (routes.length > 0) {
-//                         setCurrentRoute(routes[routes.length - 1].name);
-//                     }
+//                     if (routes.length > 0) setCurrentRoute(routes[routes.length - 1].name);
 //                 },
 //             }}
 //         >
-//             <Stack.Screen name="Dashboard">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Dashboard"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <DashboardScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="CallLogs">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Call Logs"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <CallLogsScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="Attendance">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Attendance"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <AttendanceScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="Reports">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Reports"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <ReportsScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="Leaderboard">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Leaderboard"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <LeaderboardScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="EmployeeLeaves">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="My Leaves"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <EmployeeLeavesScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
+//             {screen('HrDashboard', HrDashboardScreen, 'HR Dashboard')}
+//             {screen('HrEmployees', HrEmployeesScreen, 'Employees')}
+//             {screen('HrLeaves', HrLeavesScreen, 'Leave Requests')}
+//             {screen('HrAttendance', HrAttendanceScreen, 'Attendance')}
 //         </Stack.Navigator>
 //     );
 // }
 
-// // ── Admin Stack Navigator ──
+// // ── Admin Stack ───────────────────────────────────────────────
 // function AdminStack() {
 //     const { user, logout } = useContext(AuthContext);
 //     const [currentRoute, setCurrentRoute] = useState('AdminDashboard');
 
+//     const screen = (name, Component, title) => (
+//         <Stack.Screen name={name} key={name}>
+//             {(props) => (
+//                 <>
+//                     <CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} />
+//                     <Component {...props} />
+//                 </>
+//             )}
+//         </Stack.Screen>
+//     );
+
 //     return (
 //         <Stack.Navigator
 //             screenOptions={{ headerShown: false }}
 //             screenListeners={{
 //                 state: (e) => {
 //                     const routes = e.data.state.routes;
-//                     if (routes.length > 0) {
-//                         setCurrentRoute(routes[routes.length - 1].name);
-//                     }
+//                     if (routes.length > 0) setCurrentRoute(routes[routes.length - 1].name);
 //                 },
 //             }}
 //         >
-//             <Stack.Screen name="AdminDashboard">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Admin Dashboard"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <AdminDashboardScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="AdminUsers">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Manage Users"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <AdminUsersScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="AdminLeaves">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Leave Requests"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <AdminLeavesScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="AdminAttendance">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Attendance"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <AdminAttendanceScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="CallLogs">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader navigation={props.navigation} title="Call Logs" user={user} onLogout={logout} currentRoute={currentRoute} />
-//                         <CallLogsScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="Reports">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader navigation={props.navigation} title="Reports" user={user} onLogout={logout} currentRoute={currentRoute} />
-//                         <ReportsScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
-//             <Stack.Screen name="AdminSettings">
-//                 {(props) => (
-//                     <>
-//                         <CustomHeader
-//                             navigation={props.navigation}
-//                             title="Settings"
-//                             user={user}
-//                             onLogout={logout}
-//                             currentRoute={currentRoute}
-//                         />
-//                         <AdminSettingsScreen {...props} />
-//                     </>
-//                 )}
-//             </Stack.Screen>
+//             {screen('AdminDashboard', AdminDashboardScreen, 'Admin Dashboard')}
+//             {screen('AdminUsers', AdminUsersScreen, 'Manage Users')}
+//             {screen('AdminLeaves', AdminLeavesScreen, 'Leave Requests')}
+//             {screen('AdminAttendance', AdminAttendanceScreen, 'Attendance')}
+//             {screen('CallLogs', CallLogsScreen, 'Call Logs')}
+//             {screen('Reports', ReportsScreen, 'Reports')}
+//             {screen('AdminSettings', AdminSettingsScreen, 'Settings')}
 //         </Stack.Navigator>
 //     );
 // }
 
-// // ── Root Navigator ──
+// // ── User Stack ────────────────────────────────────────────────
+// function UserStack() {
+//     const { user, logout } = useContext(AuthContext);
+//     const [currentRoute, setCurrentRoute] = useState('Dashboard');
+
+//     const screen = (name, Component, title) => (
+//         <Stack.Screen name={name} key={name}>
+//             {(props) => (
+//                 <>
+//                     <CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} />
+//                     <Component {...props} />
+//                 </>
+//             )}
+//         </Stack.Screen>
+//     );
+
+//     return (
+//         <Stack.Navigator
+//             screenOptions={{ headerShown: false }}
+//             screenListeners={{
+//                 state: (e) => {
+//                     const routes = e.data.state.routes;
+//                     if (routes.length > 0) setCurrentRoute(routes[routes.length - 1].name);
+//                 },
+//             }}
+//         >
+//             {screen('Dashboard', DashboardScreen, 'Dashboard')}
+//             {screen('CallLogs', CallLogsScreen, 'Call Logs')}
+//             {screen('Attendance', AttendanceScreen, 'Attendance')}
+//             {screen('Reports', ReportsScreen, 'Reports')}
+//             {screen('Leaderboard', LeaderboardScreen, 'Leaderboard')}
+//             {screen('EmployeeLeaves', EmployeeLeavesScreen, 'My Leaves')}
+//         </Stack.Navigator>
+//     );
+// }
+
+// // ── Root Navigator ────────────────────────────────────────────
 // export default function AppNavigator() {
-//     const { token, user, loading, logout } = useContext(AuthContext);
+//     const { token, user, loading } = useContext(AuthContext);
 
 //     if (loading) return null;
 
 //     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+//     const isHr = user?.role === 'hr';
 
 //     return (
 //         <NavigationContainer>
@@ -567,6 +325,8 @@
 //                     <Stack.Screen name="Login" component={LoginScreen} />
 //                 ) : isAdmin ? (
 //                     <Stack.Screen name="AdminMain" component={AdminStack} />
+//                 ) : isHr ? (
+//                     <Stack.Screen name="HrMain" component={HrStack} />
 //                 ) : (
 //                     <Stack.Screen name="UserMain" component={UserStack} />
 //                 )}
@@ -575,7 +335,64 @@
 //     );
 // }
 
+// // ── Styles ────────────────────────────────────────────────────
+// const styles = StyleSheet.create({
+//     backdrop: {
+//         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+//         backgroundColor: '#000', zIndex: 999,
+//     },
+//     drawer: {
+//         position: 'absolute', top: 0, left: 0, bottom: 0,
+//         width: DRAWER_WIDTH, backgroundColor: '#0f172a', zIndex: 1000,
+//         elevation: 10, shadowColor: '#000',
+//         shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10,
+//     },
+// });
 
+// const headerStyles = StyleSheet.create({
+//     container: {
+//         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+//         backgroundColor: '#1e293b', paddingHorizontal: 16, paddingVertical: 12,
+//         paddingTop: 48, borderBottomWidth: 1,
+//     },
+//     menuBtn: { padding: 8 },
+//     menuIcon: { fontSize: 24, color: '#fff' },
+//     title: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+//     placeholder: { width: 40 },
+// });
+
+// const drawerStyles = StyleSheet.create({
+//     safeArea: { flex: 1 },
+//     header: {
+//         backgroundColor: '#1e293b', padding: 20, alignItems: 'center',
+//         borderBottomWidth: 1, borderBottomColor: '#334155',
+//     },
+//     avatar: {
+//         width: 70, height: 70, borderRadius: 35,
+//         justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+//     },
+//     avatarText: { fontSize: 28, fontWeight: 'bold' },
+//     userName: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+//     userEmail: { color: '#94a3b8', fontSize: 12, marginBottom: 8 },
+//     roleBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+//     roleText: { fontSize: 12, textTransform: 'capitalize' },
+//     menuContainer: { flex: 1, paddingTop: 16 },
+//     menuItem: {
+//         flexDirection: 'row', alignItems: 'center',
+//         paddingVertical: 14, paddingHorizontal: 20,
+//         marginHorizontal: 8, borderRadius: 12, marginBottom: 4,
+//     },
+//     menuItemActive: {},
+//     menuIcon: { fontSize: 22, width: 32, color: '#cbd5e1' },
+//     menuLabel: { fontSize: 15, color: '#cbd5e1', fontWeight: '500' },
+//     menuLabelActive: { fontWeight: 'bold' },
+//     logoutBtn: {
+//         flexDirection: 'row', alignItems: 'center', padding: 16,
+//         margin: 16, backgroundColor: '#ef444420', borderRadius: 12, marginBottom: 30,
+//     },
+//     logoutIcon: { fontSize: 20, marginRight: 12 },
+//     logoutText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
+// });
 
 
 import React, { useContext, useState, useRef, useEffect } from 'react';
@@ -588,10 +405,7 @@ import {
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 
-// ── All Screens ───────────────────────────────────────────────
 import LoginScreen from '../screens/LoginScreen';
-
-// Employee Screens
 import DashboardScreen from '../screens/DashboardScreen';
 import CallLogsScreen from '../screens/CallLogsScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
@@ -599,28 +413,72 @@ import ReportsScreen from '../screens/ReportsScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import EmployeeLeavesScreen from '../screens/EmployeeLeavesScreen';
 
-// Admin Screens
+//Admin Screen
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import AdminLeavesScreen from '../screens/admin/AdminLeavesScreen';
 import AdminAttendanceScreen from '../screens/admin/AdminAttendanceScreen';
 import AdminSettingsScreen from '../screens/admin/AdminSettingsScreen';
 
-// HR Screens
+//Hr Screen
 import HrDashboardScreen from '../screens/hr/HrDashboardScreen';
 import HrLeavesScreen from '../screens/hr/HrLeavesScreen';
 import HrEmployeesScreen from '../screens/hr/HrEmployeesScreen';
 import HrAttendanceScreen from '../screens/hr/HrAttendanceScreen';
 
+//Manager Screen
+import ManagerDashboardScreen from '../screens/manager/ManagerDashboardScreen';
+import ManagerTeamScreen from '../screens/manager/ManagerTeamScreen';
+import ManagerTargetsScreen from '../screens/manager/ManagerTargetsScreen';
+import ManagerProfileScreen from '../screens/manager/ManagerProfileScreen';
+
 const Stack = createStackNavigator();
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = width * 0.75;
 
-// ── Animated Drawer ────────────────────────────────────────────
+const ROLE_COLOR = {
+    admin: '#3B82F6', super_admin: '#8B5CF6',
+    hr: '#F59E0B', manager: '#6366F1',
+    team_leader: '#0EA5E9', agent: '#10B981',
+};
+
+const MENUS = {
+    admin: [
+        { id: 'AdminDashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'AdminUsers', label: 'Users', icon: '👥' },
+        { id: 'AdminLeaves', label: 'Leave Requests', icon: '📋' },
+        { id: 'AdminAttendance', label: 'Attendance', icon: '📍' },
+        { id: 'CallLogs', label: 'Call Logs', icon: '📞' },
+        { id: 'Reports', label: 'Reports', icon: '📊' },
+        { id: 'AdminSettings', label: 'Settings', icon: '⚙️' },
+    ],
+    hr: [
+        { id: 'HrDashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'HrEmployees', label: 'Employees', icon: '👥' },
+        { id: 'HrLeaves', label: 'Leave Requests', icon: '📋' },
+        { id: 'HrAttendance', label: 'Attendance', icon: '📍' },
+    ],
+    manager: [
+        { id: 'ManagerDashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'ManagerTeam', label: 'My Team', icon: '👥' },
+        { id: 'ManagerTargets', label: 'Set Targets', icon: '🎯' },
+        { id: 'CallLogs', label: 'Call Logs', icon: '📞' },
+        { id: 'Reports', label: 'Reports', icon: '📊' },
+        { id: 'ManagerProfile', label: 'My Profile', icon: '👤' },
+    ],
+    employee: [
+        { id: 'Dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'CallLogs', label: 'Call Logs', icon: '📞' },
+        { id: 'Attendance', label: 'Attendance', icon: '📍' },
+        { id: 'Reports', label: 'Reports', icon: '📊' },
+        { id: 'Leaderboard', label: 'Leaderboard', icon: '🏆' },
+        { id: 'EmployeeLeaves', label: 'My Leaves', icon: '🗓️' },
+    ],
+};
+
 const AnimatedDrawer = ({ visible, onClose, children }) => {
     const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
     const opacity = useRef(new Animated.Value(0)).current;
-
     useEffect(() => {
         if (visible) {
             Animated.parallel([
@@ -634,7 +492,6 @@ const AnimatedDrawer = ({ visible, onClose, children }) => {
             ]).start();
         }
     }, [visible]);
-
     return (
         <>
             <Animated.View style={[styles.backdrop, { opacity }]}>
@@ -647,69 +504,34 @@ const AnimatedDrawer = ({ visible, onClose, children }) => {
     );
 };
 
-// ── Custom Header ──────────────────────────────────────────────
 function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
     const [menuVisible, setMenuVisible] = useState(false);
-
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
     const isHr = user?.role === 'hr';
-
-    const adminMenu = [
-        { id: 'dashboard', screenName: 'AdminDashboard', label: ' Dashboard', icon: '🏠' },
-        { id: 'users', screenName: 'AdminUsers', label: ' Users', icon: '👥' },
-        { id: 'leaves', screenName: 'AdminLeaves', label: ' Leave Requests', icon: '📋' },
-        { id: 'attendance', screenName: 'AdminAttendance', label: ' Attendance', icon: '📍' },
-        { id: 'callLogs', screenName: 'CallLogs', label: ' Call Logs', icon: '📞' },
-        { id: 'reports', screenName: 'Reports', label: ' Reports', icon: '📊' },
-        { id: 'settings', screenName: 'AdminSettings', label: ' Settings', icon: '⚙️' },
-    ];
-
-    const hrMenu = [
-        { id: 'dashboard', screenName: 'HrDashboard', label: ' Dashboard', icon: '🏠' },
-        { id: 'employees', screenName: 'HrEmployees', label: ' Employees', icon: '👥' },
-        { id: 'leaves', screenName: 'HrLeaves', label: ' Leave Requests', icon: '📋' },
-        { id: 'attendance', screenName: 'HrAttendance', label: ' Attendance', icon: '📍' },
-    ];
-
-    const employeeMenu = [
-        { id: 'dashboard', screenName: 'Dashboard', label: '🏠 Dashboard', icon: '🏠' },
-        { id: 'calls', screenName: 'CallLogs', label: '📞 Call Logs', icon: '📞' },
-        { id: 'attendance', screenName: 'Attendance', label: '📍 Attendance', icon: '📍' },
-        { id: 'reports', screenName: 'Reports', label: '📊 Reports', icon: '📊' },
-        { id: 'leaderboard', screenName: 'Leaderboard', label: '🏆 Leaderboard', icon: '🏆' },
-        { id: 'leaves', screenName: 'EmployeeLeaves', label: '🗓️ My Leaves', icon: '🗓️' },
-    ];
-
-    const menuItems = isAdmin ? adminMenu : isHr ? hrMenu : employeeMenu;
+    const isManager = user?.role === 'manager';
+    const menuKey = isAdmin ? 'admin' : isHr ? 'hr' : isManager ? 'manager' : 'employee';
+    const menuItems = MENUS[menuKey];
+    const roleColor = ROLE_COLOR[user?.role] || '#6366F1';
 
     const handleNavigation = (screenName) => {
         setMenuVisible(false);
         setTimeout(() => navigation.navigate(screenName), 150);
     };
-
-    const handleLogout = () => {
-        setMenuVisible(false);
-        setTimeout(() => onLogout(), 150);
-    };
-
-    // Role color for header
-    const roleColor = isAdmin ? '#6366f1' : isHr ? '#eab308' : '#22c55e';
+    const handleLogout = () => { setMenuVisible(false); setTimeout(() => onLogout(), 150); };
 
     return (
         <>
-            <View style={[headerStyles.container, { borderBottomColor: roleColor + '40' }]}>
+            <View style={[headerStyles.container, { borderBottomColor: roleColor + '50' }]}>
                 <TouchableOpacity onPress={() => setMenuVisible(true)} style={headerStyles.menuBtn} activeOpacity={0.7}>
                     <Text style={headerStyles.menuIcon}>☰</Text>
                 </TouchableOpacity>
                 <Text style={headerStyles.title}>{title}</Text>
                 <View style={headerStyles.placeholder} />
             </View>
-
             {menuVisible && (
                 <AnimatedDrawer visible={menuVisible} onClose={() => setMenuVisible(false)}>
                     <SafeAreaView style={drawerStyles.safeArea}>
-                        {/* Header */}
-                        <View style={drawerStyles.header}>
+                        <View style={[drawerStyles.header, { borderBottomColor: roleColor + '40' }]}>
                             <View style={[drawerStyles.avatar, { backgroundColor: roleColor + '30' }]}>
                                 <Text style={[drawerStyles.avatarText, { color: roleColor }]}>
                                     {(user?.name || 'U').charAt(0).toUpperCase()}
@@ -718,34 +540,26 @@ function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
                             <Text style={drawerStyles.userName}>{user?.name || 'User'}</Text>
                             <Text style={drawerStyles.userEmail}>{user?.email || ''}</Text>
                             <View style={[drawerStyles.roleBadge, { backgroundColor: roleColor + '20' }]}>
-                                <Text style={[drawerStyles.roleText, { color: roleColor }]}>{user?.role || 'agent'}</Text>
+                                <Text style={[drawerStyles.roleText, { color: roleColor }]}>
+                                    {user?.role?.replace('_', ' ') || 'agent'}
+                                </Text>
                             </View>
                         </View>
-
-                        {/* Menu Items */}
                         <ScrollView style={drawerStyles.menuContainer} showsVerticalScrollIndicator={false}>
                             {menuItems.map((item) => (
                                 <TouchableOpacity
                                     key={item.id}
-                                    style={[
-                                        drawerStyles.menuItem,
-                                        currentRoute === item.screenName && [drawerStyles.menuItemActive, { backgroundColor: roleColor + '20' }]
-                                    ]}
-                                    onPress={() => handleNavigation(item.screenName)}
+                                    style={[drawerStyles.menuItem, currentRoute === item.id && [drawerStyles.menuItemActive, { backgroundColor: roleColor + '20' }]]}
+                                    onPress={() => handleNavigation(item.id)}
                                     activeOpacity={0.6}
                                 >
                                     <Text style={drawerStyles.menuIcon}>{item.icon}</Text>
-                                    <Text style={[
-                                        drawerStyles.menuLabel,
-                                        currentRoute === item.screenName && [drawerStyles.menuLabelActive, { color: roleColor }]
-                                    ]}>
+                                    <Text style={[drawerStyles.menuLabel, currentRoute === item.id && [drawerStyles.menuLabelActive, { color: roleColor }]]}>
                                         {item.label}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
-
-                        {/* Logout */}
                         <TouchableOpacity style={drawerStyles.logoutBtn} onPress={handleLogout} activeOpacity={0.6}>
                             <Text style={drawerStyles.logoutIcon}>🚪</Text>
                             <Text style={drawerStyles.logoutText}>Logout</Text>
@@ -757,57 +571,36 @@ function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
     );
 }
 
-// ── Helper: Wrapped Screen ────────────────────────────────────
-const wrap = (Component, screenTitle) => (props) => {
+function ManagerStack() {
     const { user, logout } = useContext(AuthContext);
-    const [currentRoute, setCurrentRoute] = useState(screenTitle);
-
-    return (
-        <>
-            <CustomHeader
-                navigation={props.navigation}
-                title={screenTitle}
-                user={user}
-                onLogout={logout}
-                currentRoute={currentRoute}
-            />
-            <Component {...props} />
-        </>
+    const [currentRoute, setCurrentRoute] = useState('ManagerDashboard');
+    const screen = (name, Component, title) => (
+        <Stack.Screen name={name} key={name}>
+            {(props) => (<><CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} /><Component {...props} /></>)}
+        </Stack.Screen>
     );
-};
+    return (
+        <Stack.Navigator screenOptions={{ headerShown: false }} screenListeners={{ state: (e) => { const r = e.data.state.routes; if (r.length > 0) setCurrentRoute(r[r.length - 1].name); } }}>
+            {screen('ManagerDashboard', ManagerDashboardScreen, 'Manager Dashboard')}
+            {screen('ManagerTeam', ManagerTeamScreen, 'My Team')}
+            {screen('ManagerTargets', ManagerTargetsScreen, 'Set Targets')}
+            {screen('CallLogs', CallLogsScreen, 'Call Logs')}
+            {screen('Reports', ReportsScreen, 'Reports')}
+            {screen('ManagerProfile', ManagerProfileScreen, 'My Profile')}
+        </Stack.Navigator>
+    );
+}
 
-// ── HR Stack ──────────────────────────────────────────────────
 function HrStack() {
     const { user, logout } = useContext(AuthContext);
     const [currentRoute, setCurrentRoute] = useState('HrDashboard');
-
     const screen = (name, Component, title) => (
         <Stack.Screen name={name} key={name}>
-            {(props) => (
-                <>
-                    <CustomHeader
-                        navigation={props.navigation}
-                        title={title}
-                        user={user}
-                        onLogout={logout}
-                        currentRoute={currentRoute}
-                    />
-                    <Component {...props} />
-                </>
-            )}
+            {(props) => (<><CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} /><Component {...props} /></>)}
         </Stack.Screen>
     );
-
     return (
-        <Stack.Navigator
-            screenOptions={{ headerShown: false }}
-            screenListeners={{
-                state: (e) => {
-                    const routes = e.data.state.routes;
-                    if (routes.length > 0) setCurrentRoute(routes[routes.length - 1].name);
-                },
-            }}
-        >
+        <Stack.Navigator screenOptions={{ headerShown: false }} screenListeners={{ state: (e) => { const r = e.data.state.routes; if (r.length > 0) setCurrentRoute(r[r.length - 1].name); } }}>
             {screen('HrDashboard', HrDashboardScreen, 'HR Dashboard')}
             {screen('HrEmployees', HrEmployeesScreen, 'Employees')}
             {screen('HrLeaves', HrLeavesScreen, 'Leave Requests')}
@@ -816,32 +609,16 @@ function HrStack() {
     );
 }
 
-// ── Admin Stack ───────────────────────────────────────────────
 function AdminStack() {
     const { user, logout } = useContext(AuthContext);
     const [currentRoute, setCurrentRoute] = useState('AdminDashboard');
-
     const screen = (name, Component, title) => (
         <Stack.Screen name={name} key={name}>
-            {(props) => (
-                <>
-                    <CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} />
-                    <Component {...props} />
-                </>
-            )}
+            {(props) => (<><CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} /><Component {...props} /></>)}
         </Stack.Screen>
     );
-
     return (
-        <Stack.Navigator
-            screenOptions={{ headerShown: false }}
-            screenListeners={{
-                state: (e) => {
-                    const routes = e.data.state.routes;
-                    if (routes.length > 0) setCurrentRoute(routes[routes.length - 1].name);
-                },
-            }}
-        >
+        <Stack.Navigator screenOptions={{ headerShown: false }} screenListeners={{ state: (e) => { const r = e.data.state.routes; if (r.length > 0) setCurrentRoute(r[r.length - 1].name); } }}>
             {screen('AdminDashboard', AdminDashboardScreen, 'Admin Dashboard')}
             {screen('AdminUsers', AdminUsersScreen, 'Manage Users')}
             {screen('AdminLeaves', AdminLeavesScreen, 'Leave Requests')}
@@ -853,32 +630,16 @@ function AdminStack() {
     );
 }
 
-// ── User Stack ────────────────────────────────────────────────
 function UserStack() {
     const { user, logout } = useContext(AuthContext);
     const [currentRoute, setCurrentRoute] = useState('Dashboard');
-
     const screen = (name, Component, title) => (
         <Stack.Screen name={name} key={name}>
-            {(props) => (
-                <>
-                    <CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} />
-                    <Component {...props} />
-                </>
-            )}
+            {(props) => (<><CustomHeader navigation={props.navigation} title={title} user={user} onLogout={logout} currentRoute={currentRoute} /><Component {...props} /></>)}
         </Stack.Screen>
     );
-
     return (
-        <Stack.Navigator
-            screenOptions={{ headerShown: false }}
-            screenListeners={{
-                state: (e) => {
-                    const routes = e.data.state.routes;
-                    if (routes.length > 0) setCurrentRoute(routes[routes.length - 1].name);
-                },
-            }}
-        >
+        <Stack.Navigator screenOptions={{ headerShown: false }} screenListeners={{ state: (e) => { const r = e.data.state.routes; if (r.length > 0) setCurrentRoute(r[r.length - 1].name); } }}>
             {screen('Dashboard', DashboardScreen, 'Dashboard')}
             {screen('CallLogs', CallLogsScreen, 'Call Logs')}
             {screen('Attendance', AttendanceScreen, 'Attendance')}
@@ -889,15 +650,12 @@ function UserStack() {
     );
 }
 
-// ── Root Navigator ────────────────────────────────────────────
 export default function AppNavigator() {
     const { token, user, loading } = useContext(AuthContext);
-
     if (loading) return null;
-
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
     const isHr = user?.role === 'hr';
-
+    const isManager = user?.role === 'manager';
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -907,6 +665,8 @@ export default function AppNavigator() {
                     <Stack.Screen name="AdminMain" component={AdminStack} />
                 ) : isHr ? (
                     <Stack.Screen name="HrMain" component={HrStack} />
+                ) : isManager ? (
+                    <Stack.Screen name="ManagerMain" component={ManagerStack} />
                 ) : (
                     <Stack.Screen name="UserMain" component={UserStack} />
                 )}
@@ -915,61 +675,33 @@ export default function AppNavigator() {
     );
 }
 
-// ── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    backdrop: {
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: '#000', zIndex: 999,
-    },
-    drawer: {
-        position: 'absolute', top: 0, left: 0, bottom: 0,
-        width: DRAWER_WIDTH, backgroundColor: '#0f172a', zIndex: 1000,
-        elevation: 10, shadowColor: '#000',
-        shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10,
-    },
+    backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 999 },
+    drawer: { position: 'absolute', top: 0, left: 0, bottom: 0, width: DRAWER_WIDTH, backgroundColor: '#0f172a', zIndex: 1000, elevation: 10, shadowColor: '#000', shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10 },
 });
-
 const headerStyles = StyleSheet.create({
-    container: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        backgroundColor: '#1e293b', paddingHorizontal: 16, paddingVertical: 12,
-        paddingTop: 48, borderBottomWidth: 1,
-    },
+    container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1e293b', paddingHorizontal: 16, paddingVertical: 12, paddingTop: 48, borderBottomWidth: 1 },
     menuBtn: { padding: 8 },
     menuIcon: { fontSize: 24, color: '#fff' },
     title: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
     placeholder: { width: 40 },
 });
-
 const drawerStyles = StyleSheet.create({
     safeArea: { flex: 1 },
-    header: {
-        backgroundColor: '#1e293b', padding: 20, alignItems: 'center',
-        borderBottomWidth: 1, borderBottomColor: '#334155',
-    },
-    avatar: {
-        width: 70, height: 70, borderRadius: 35,
-        justifyContent: 'center', alignItems: 'center', marginBottom: 12,
-    },
+    header: { backgroundColor: '#1e293b', padding: 20, alignItems: 'center', borderBottomWidth: 1 },
+    avatar: { width: 70, height: 70, borderRadius: 35, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
     avatarText: { fontSize: 28, fontWeight: 'bold' },
     userName: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
     userEmail: { color: '#94a3b8', fontSize: 12, marginBottom: 8 },
     roleBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-    roleText: { fontSize: 12, textTransform: 'capitalize' },
+    roleText: { fontSize: 12, textTransform: 'capitalize', fontWeight: '600' },
     menuContainer: { flex: 1, paddingTop: 16 },
-    menuItem: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingVertical: 14, paddingHorizontal: 20,
-        marginHorizontal: 8, borderRadius: 12, marginBottom: 4,
-    },
+    menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, marginHorizontal: 8, borderRadius: 12, marginBottom: 4 },
     menuItemActive: {},
-    menuIcon: { fontSize: 22, width: 32, color: '#cbd5e1' },
+    menuIcon: { fontSize: 22, width: 36, color: '#cbd5e1' },
     menuLabel: { fontSize: 15, color: '#cbd5e1', fontWeight: '500' },
     menuLabelActive: { fontWeight: 'bold' },
-    logoutBtn: {
-        flexDirection: 'row', alignItems: 'center', padding: 16,
-        margin: 16, backgroundColor: '#ef444420', borderRadius: 12, marginBottom: 30,
-    },
+    logoutBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, margin: 16, backgroundColor: '#ef444420', borderRadius: 12, marginBottom: 30 },
     logoutIcon: { fontSize: 20, marginRight: 12 },
     logoutText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
 });

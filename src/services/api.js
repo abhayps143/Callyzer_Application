@@ -195,10 +195,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Abhay ka IP
-const API_BASE_URL = 'http://192.168.1.51:5000/api';
+// const API_BASE_URL = 'http://192.168.1.51:5000/api';
 
 // Vinayak ka IP
-// const API_BASE_URL = 'http://192.168.1.65:5000/api';
+const API_BASE_URL = 'http://192.168.1.65:5000/api';
 
 // Production server (jab deploy karo)
 // const API_BASE_URL = 'https://yourserver.com/api';
