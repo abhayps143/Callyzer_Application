@@ -7,15 +7,15 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 //Vianayk IP-Adress
-const API = 'http://192.168.1.65:5000/api';
+// const API = 'http://192.168.1.65:5000/api';
 
 //Abhay IP-Adress
-// const API = 'http://192.168.1.51:5000/api';
+const API = 'http://192.168.1.51:5000/api';
 
 const ROLE_CONFIG = {
-  agent:       { color: '#10B981', bg: '#D1FAE5', label: 'Agent' },
+  agent: { color: '#10B981', bg: '#D1FAE5', label: 'Agent' },
   team_leader: { color: '#0EA5E9', bg: '#E0F2FE', label: 'Team Leader' },
-  manager:     { color: '#6366F1', bg: '#E0E7FF', label: 'Manager' },
+  manager: { color: '#6366F1', bg: '#E0E7FF', label: 'Manager' },
 };
 const ALLOWED_ROLES = ['agent', 'team_leader'];
 const EMPTY = { name: '', email: '', password: '', role: 'agent', phone: '', isActive: true };

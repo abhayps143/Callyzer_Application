@@ -28,6 +28,7 @@ import HrDashboardScreen from '../screens/hr/HrDashboardScreen';
 import HrLeavesScreen from '../screens/hr/HrLeavesScreen';
 import HrEmployeesScreen from '../screens/hr/HrEmployeesScreen';
 import HrAttendanceScreen from '../screens/hr/HrAttendanceScreen';
+import HrProfileScreen from '../screens/hr/HrProfileScreen';
 
 //Manager Screen
 import ManagerDashboardScreen from '../screens/manager/ManagerDashboardScreen';
@@ -60,6 +61,7 @@ const MENUS = {
         { id: 'HrEmployees', label: 'Employees', icon: '👥' },
         { id: 'HrLeaves', label: 'Leave Requests', icon: '📋' },
         { id: 'HrAttendance', label: 'Attendance', icon: '📍' },
+        { id: 'HrProfile', label: 'My Profile', icon: '👤' },
     ],
     manager: [
         { id: 'ManagerDashboard', label: 'Dashboard', icon: '🏠' },
@@ -208,6 +210,7 @@ function HrStack() {
             {screen('HrEmployees', HrEmployeesScreen, 'Employees')}
             {screen('HrLeaves', HrLeavesScreen, 'Leave Requests')}
             {screen('HrAttendance', HrAttendanceScreen, 'Attendance')}
+            {screen('HrProfile', HrProfileScreen, 'My Profile')}
         </Stack.Navigator>
     );
 }

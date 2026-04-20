@@ -454,7 +454,7 @@ export const api = {
 
     applyLeave: async (data) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/apply-leave`, {
+        const res = await fetch(`${API_BASE_URL}/hr/my-leaves`, {
             method: 'POST',
             headers,
             body: JSON.stringify(data),
@@ -517,7 +517,7 @@ export const api = {
         const query = new URLSearchParams({
             ...(params.status && params.status !== 'All' && { status: params.status }),
         });
-        const res = await fetch(`${API_BASE_URL}/admin/leaves?${query}`, { headers });
+        const res = await fetch(`${API_BASE_URL}/hr/leaves?${query}`, { headers });
         return res.json();
     },
 
@@ -548,6 +548,43 @@ export const api = {
     },
 
     // ── HR ───────────────────────────────────────────────
+    getHrProfile: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/hr/profile`, { headers });
+        return res.json();
+    },
+
+    updateHrProfile: async (data) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/hr/profile`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+
+    getHrStats: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/hr/stats`, { headers });
+        return res.json();
+    },
+
+    getHrRecentEmployees: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/hr/recent-employees`, { headers });
+        return res.json();
+    },
+
+    hrLeaveAction: async (hrRecordId, leaveId, action, remarks = '') => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/hr/leaves/${hrRecordId}/${leaveId}/action`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ action, remarks }),
+        });
+        return res.json();
+    },
     getHrEmployees: async (params = {}) => {
         const headers = await authHeaders();
         const query = new URLSearchParams({
@@ -574,6 +611,12 @@ export const api = {
             headers,
             body: JSON.stringify({ note }),
         });
+        return res.json();
+    },
+
+    getAllAttendance: async (monthStr) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/attendance/all?month=${monthStr}`, { headers });
         return res.json();
     },
 

@@ -53,9 +53,17 @@ const ApplyModal = ({ visible, onClose, onDone }) => {
         setSaving(true); setError('');
         try {
             const res = await api.applyLeave(form);
-            if (res.leave || res._id || res.message?.toLowerCase().includes('success')) onDone();
-            else setError(res.message || 'Failed to apply');
-        } catch (e) { setError('Server error'); }
+            console.log('applyLeave response:', JSON.stringify(res));
+            // Accept any non-error response as success
+            if (res.error || res.message?.toLowerCase().includes('access') || res.message?.toLowerCase().includes('unauthorized')) {
+                setError(res.message || res.error || 'Failed to apply');
+            } else {
+                onDone();
+            }
+        } catch (e) {
+            console.log('applyLeave error:', e);
+            setError('Server error. Please try again.');
+        }
         finally { setSaving(false); }
     };
 
