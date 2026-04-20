@@ -24,15 +24,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-location",
-        {
-          "locationWhenInUsePermission": "Allow Callyzer to use your location for attendance."
-        }
-      ],
-      "expo-sharing"
-    ]
+    }
   }
 }
