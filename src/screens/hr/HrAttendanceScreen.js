@@ -1,31 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    View, Text, ScrollView, StyleSheet, TouchableOpacity,
-    ActivityIndicator, RefreshControl
+    View, Text, FlatList, StyleSheet, TouchableOpacity,
+    ActivityIndicator, TextInput, ScrollView, StatusBar, RefreshControl
 } from 'react-native';
 import { api } from '../../services/api';
+import { C } from '../../theme';
 
-const STATUS_CONFIG = {
-    present: { label: 'Present', bg: '#22c55e20', color: '#22c55e' },
-    absent: { label: 'Absent', bg: '#ef444420', color: '#ef4444' },
-    half_day: { label: 'Half Day', bg: '#eab30820', color: '#eab308' },
-    work_from_home: { label: 'WFH', bg: '#3b82f620', color: '#3b82f6' },
-    holiday: { label: 'Holiday', bg: '#a855f720', color: '#a855f7' },
+const STATUS_CFG = {
+    present:        { label: 'Present',  color: C.green,  soft: C.greenSoft },
+    absent:         { label: 'Absent',   color: C.red,    soft: C.redSoft },
+    half_day:       { label: 'Half Day', color: C.amber,  soft: C.amberSoft },
+    work_from_home: { label: 'WFH',      color: C.blue,   soft: C.blueSoft },
+    holiday:        { label: 'Holiday',  color: C.purple, soft: C.purpleSoft },
 };
+
+const FILTER_TABS = ['', 'present', 'absent', 'half_day', 'work_from_home'];
+const FILTER_LABELS = { '': 'All', present: 'Present', absent: 'Absent', half_day: 'Half Day', work_from_home: 'WFH' };
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const fmtTime = (isoStr) => {
-    if (!isoStr) return '—';
-    return new Date(isoStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-};
-
-const fmtHours = (h) => {
-    if (!h) return '—';
-    const hrs = Math.floor(h);
-    const mins = Math.round((h - hrs) * 60);
-    return `${hrs}h ${mins}m`;
-};
+const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+const fmtHours = (h) => { if (!h) return '—'; const hrs = Math.floor(h); const mins = Math.round((h - hrs) * 60); return `${hrs}h ${mins}m`; };
 
 export default function HrAttendanceScreen() {
     const now = new Date();
@@ -35,24 +29,23 @@ export default function HrAttendanceScreen() {
     const [loadingEmps, setLoadingEmps] = useState(true);
     const [loadingAtt, setLoadingAtt] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [empSearch, setEmpSearch] = useState('');
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [year, setYear] = useState(now.getFullYear());
+    const [filterStatus, setFilterStatus] = useState('');
 
-    // Load employees
     useEffect(() => {
-        const fetchEmps = async () => {
+        (async () => {
             try {
                 const data = await api.getHrEmployees({ limit: 100 });
                 const emps = data.employees || [];
                 setEmployees(emps);
                 if (emps.length) setSelectedEmp(emps[0]);
             } catch { }
-            finally { setLoadingEmps(false); }
-        };
-        fetchEmps();
+            setLoadingEmps(false);
+        })();
     }, []);
 
-    // Load attendance
     const fetchAttendance = useCallback(async () => {
         if (!selectedEmp) return;
         setLoadingAtt(true);
@@ -63,7 +56,7 @@ export default function HrAttendanceScreen() {
                 r => (r.employee?._id || r.employee) === selectedEmp._id
             );
             setAttendance(empRecords);
-        } catch { }
+        } catch { setAttendance([]); }
         finally { setLoadingAtt(false); setRefreshing(false); }
     }, [selectedEmp, month, year]);
 
@@ -71,116 +64,160 @@ export default function HrAttendanceScreen() {
 
     const onRefresh = () => { setRefreshing(true); fetchAttendance(); };
 
-    const summary = {
-        present: attendance.filter(a => a.status === 'present').length,
-        absent: attendance.filter(a => a.status === 'absent').length,
-        half_day: attendance.filter(a => a.status === 'half_day').length,
-        work_from_home: attendance.filter(a => a.status === 'work_from_home').length,
-    };
+    const filteredEmps = employees.filter(e =>
+        !empSearch || e.name?.toLowerCase().includes(empSearch.toLowerCase())
+    );
+
+    const stats = attendance.length > 0
+        ? attendance.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {})
+        : {};
+
+    const displayedRecords = filterStatus
+        ? attendance.filter(a => a.status === filterStatus)
+        : attendance;
+
+    if (loadingEmps) return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
 
     return (
         <View style={styles.container}>
-            <View style={styles.main}>
-                {/* Employee List (Left Panel) */}
+            <StatusBar barStyle="dark-content" backgroundColor={C.surface} />
+
+            <View style={styles.header}>
+                <Text style={styles.title}>Attendance</Text>
+            </View>
+
+            <View style={styles.body}>
+                {/* Employee Panel */}
                 <View style={styles.empPanel}>
-                    <Text style={styles.panelTitle}>Employees</Text>
-                    {loadingEmps ? (
-                        <ActivityIndicator color="#eab308" style={{ marginTop: 20 }} />
-                    ) : (
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {employees.map(emp => (
+                    <View style={styles.empSearchWrap}>
+                        <TextInput
+                            style={styles.empSearchInput}
+                            placeholder="Search…"
+                            placeholderTextColor={C.textMuted}
+                            value={empSearch}
+                            onChangeText={setEmpSearch}
+                        />
+                    </View>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {filteredEmps.map(emp => {
+                            const active = selectedEmp?._id === emp._id;
+                            return (
                                 <TouchableOpacity
                                     key={emp._id}
-                                    style={[styles.empItem, selectedEmp?._id === emp._id && styles.empItemActive]}
+                                    style={[styles.empItem, active && styles.empItemActive]}
                                     onPress={() => setSelectedEmp(emp)}
                                 >
-                                    <View style={styles.miniAvatar}>
-                                        <Text style={styles.miniAvatarText}>{emp.name?.charAt(0).toUpperCase()}</Text>
+                                    <View style={[styles.empAvatar, active && { backgroundColor: C.primary }]}>
+                                        <Text style={styles.empAvatarText}>{emp.name?.charAt(0).toUpperCase()}</Text>
                                     </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.empItemName} numberOfLines={1}>{emp.name}</Text>
-                                        <Text style={styles.empItemRole}>{emp.role}</Text>
-                                    </View>
+                                    <Text style={[styles.empName, active && { color: C.primary }]} numberOfLines={1}>
+                                        {emp.name}
+                                    </Text>
                                 </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    )}
+                            );
+                        })}
+                    </ScrollView>
                 </View>
 
-                {/* Right Panel */}
+                {/* Attendance Detail */}
                 <View style={styles.attPanel}>
-                    {/* Month/Year Picker */}
-                    <View style={styles.pickerRow}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {MONTHS.map((m, i) => (
-                                <TouchableOpacity
-                                    key={i}
-                                    style={[styles.monthBtn, month === i + 1 && styles.monthBtnActive]}
-                                    onPress={() => setMonth(i + 1)}
-                                >
-                                    <Text style={[styles.monthText, month === i + 1 && styles.monthTextActive]}>{m}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                    <View style={styles.yearRow}>
+                    {/* Month Selector */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthRow}>
+                        {MONTHS.map((m, i) => (
+                            <TouchableOpacity
+                                key={i}
+                                style={[styles.chip, month === i + 1 && { backgroundColor: C.primary }]}
+                                onPress={() => setMonth(i + 1)}
+                            >
+                                <Text style={[styles.chipText, month === i + 1 && { color: '#fff' }]}>{m}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Year Selector */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearRow}>
                         {[2024, 2025, 2026].map(y => (
                             <TouchableOpacity
                                 key={y}
-                                style={[styles.yearBtn, year === y && styles.yearBtnActive]}
+                                style={[styles.chip, year === y && { backgroundColor: C.textSub }]}
                                 onPress={() => setYear(y)}
                             >
-                                <Text style={[styles.yearText, year === y && styles.yearTextActive]}>{y}</Text>
+                                <Text style={[styles.chipText, year === y && { color: '#fff' }]}>{y}</Text>
                             </TouchableOpacity>
                         ))}
+                    </ScrollView>
+
+                    {/* Stats Row */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsRow}>
+                        {Object.entries(STATUS_CFG).map(([key, cfg]) =>
+                            stats[key] > 0 ? (
+                                <View key={key} style={[styles.statChip, { backgroundColor: cfg.soft }]}>
+                                    <Text style={[styles.statVal, { color: cfg.color }]}>{stats[key]}</Text>
+                                    <Text style={[styles.statLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                                </View>
+                            ) : null
+                        )}
+                    </ScrollView>
+
+                    {/* Filter Tabs */}
+                    <View style={styles.filterWrap}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterTabs}>
+                            {FILTER_TABS.map(tab => {
+                                const cfg = STATUS_CFG[tab];
+                                const active = filterStatus === tab;
+                                return (
+                                    <TouchableOpacity
+                                        key={tab}
+                                        style={[
+                                            styles.filterTab,
+                                            active && { backgroundColor: cfg ? cfg.color : C.primary, borderColor: cfg ? cfg.color : C.primary }
+                                        ]}
+                                        onPress={() => setFilterStatus(tab)}
+                                    >
+                                        {tab !== '' && (
+                                            <View style={[styles.filterDot, { backgroundColor: active ? '#fff' : cfg.color }]} />
+                                        )}
+                                        <Text style={[styles.filterTabText, active && { color: '#fff' }]}>
+                                            {FILTER_LABELS[tab]}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
                     </View>
 
-                    {/* Summary */}
-                    <View style={styles.summaryRow}>
-                        {Object.entries(summary).map(([key, val]) => (
-                            <View key={key} style={[styles.summaryCard, { backgroundColor: STATUS_CONFIG[key]?.bg }]}>
-                                <Text style={[styles.summaryVal, { color: STATUS_CONFIG[key]?.color }]}>{val}</Text>
-                                <Text style={[styles.summaryLabel, { color: STATUS_CONFIG[key]?.color }]}>
-                                    {STATUS_CONFIG[key]?.label}
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Attendance Records */}
-                    {loadingAtt ? (
-                        <View style={styles.center}>
-                            <ActivityIndicator color="#eab308" />
-                        </View>
-                    ) : attendance.length === 0 ? (
-                        <View style={styles.center}>
-                            <Text style={styles.emptyIcon}>📅</Text>
-                            <Text style={styles.emptyText}>Is mahine ka koi record nahi</Text>
-                        </View>
-                    ) : (
-                        <ScrollView
-                            showsVerticalScrollIndicator={false}
-                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#eab308" />}
-                        >
-                            {attendance.map((att) => (
-                                <View key={att._id} style={styles.attCard}>
-                                    <View style={styles.attTop}>
-                                        <Text style={styles.attDate}>{att.date}</Text>
-                                        <View style={[styles.attBadge, { backgroundColor: STATUS_CONFIG[att.status]?.bg }]}>
-                                            <Text style={[styles.attBadgeText, { color: STATUS_CONFIG[att.status]?.color }]}>
-                                                {STATUS_CONFIG[att.status]?.label || att.status}
+                    {/* Records */}
+                    {loadingAtt
+                        ? <ActivityIndicator color={C.primary} style={{ marginTop: 30 }} />
+                        : <FlatList
+                            data={displayedRecords}
+                            keyExtractor={(item, i) => item._id || i.toString()}
+                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+                            renderItem={({ item }) => {
+                                const s = STATUS_CFG[item.status] || { label: item.status || 'Unknown', color: C.textSub, soft: C.surfaceAlt };
+                                return (
+                                    <View style={styles.attRow}>
+                                        <View style={[styles.dateBox, { backgroundColor: s.soft }]}>
+                                            <Text style={[styles.dateText, { color: s.color }]}>
+                                                {item.date ? item.date.split('-')[2] : '?'}
                                             </Text>
                                         </View>
-                                        <Text style={styles.attHours}>{fmtHours(att.hoursWorked)}</Text>
+                                        <View style={{ flex: 1 }}>
+                                            <View style={[styles.attPill, { backgroundColor: s.soft }]}>
+                                                <Text style={[styles.attPillText, { color: s.color }]}>{s.label}</Text>
+                                            </View>
+                                            <Text style={styles.timeText}>
+                                                {fmtTime(item.punchIn?.time)} — {fmtTime(item.punchOut?.time)}
+                                                {item.hoursWorked ? `  ·  ${fmtHours(item.hoursWorked)}` : ''}
+                                            </Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.attTimes}>
-                                        <Text style={styles.punchIn}>🟢 {fmtTime(att.punchIn?.time)}</Text>
-                                        <Text style={styles.punchOut}>🔴 {fmtTime(att.punchOut?.time)}</Text>
-                                    </View>
-                                </View>
-                            ))}
-                        </ScrollView>
-                    )}
+                                );
+                            }}
+                            ListEmptyComponent={<Text style={styles.empty}>No records found</Text>}
+                            contentContainerStyle={{ paddingBottom: 20 }}
+                        />
+                    }
                 </View>
             </View>
         </View>
@@ -188,57 +225,53 @@ export default function HrAttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0f172a' },
-    main: { flex: 1, flexDirection: 'row' },
+    container: { flex: 1, backgroundColor: C.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
+    header: {
+        paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16,
+        backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
+    },
+    title: { fontSize: 22, fontWeight: '800', color: C.text },
 
-    empPanel: {
-        width: 110, backgroundColor: '#1e293b',
-        borderRightWidth: 1, borderRightColor: '#334155', padding: 8,
-    },
-    panelTitle: { color: '#64748b', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
-    empItem: { flexDirection: 'row', alignItems: 'center', padding: 6, borderRadius: 10, marginBottom: 4 },
-    empItemActive: { backgroundColor: '#eab30815', borderWidth: 1, borderColor: '#eab30840' },
-    miniAvatar: {
-        width: 28, height: 28, borderRadius: 14,
-        backgroundColor: '#eab30820', justifyContent: 'center', alignItems: 'center', marginRight: 6,
-    },
-    miniAvatarText: { color: '#eab308', fontWeight: 'bold', fontSize: 11 },
-    empItemName: { color: '#f8fafc', fontSize: 11, fontWeight: '600' },
-    empItemRole: { color: '#475569', fontSize: 9, textTransform: 'capitalize' },
+    body: { flex: 1, flexDirection: 'row' },
+
+    empPanel: { width: 112, backgroundColor: C.surface, borderRightWidth: 1, borderRightColor: C.border },
+    empSearchWrap: { margin: 6 },
+    empSearchInput: { padding: 8, borderRadius: 10, backgroundColor: C.surfaceAlt, fontSize: 12, color: C.text, borderWidth: 1, borderColor: C.border },
+    empItem: { flexDirection: 'row', alignItems: 'center', padding: 8, gap: 6 },
+    empItemActive: { backgroundColor: C.primarySoft },
+    empAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.surfaceAlt, justifyContent: 'center', alignItems: 'center' },
+    empAvatarText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+    empName: { fontSize: 11, color: C.textSub, fontWeight: '500', flex: 1 },
 
     attPanel: { flex: 1, padding: 10 },
-    pickerRow: { marginBottom: 6 },
-    monthBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginRight: 6, backgroundColor: '#0f172a' },
-    monthBtnActive: { backgroundColor: '#eab308' },
-    monthText: { color: '#64748b', fontSize: 11, fontWeight: '600' },
-    monthTextActive: { color: '#0f172a' },
 
-    yearRow: { flexDirection: 'row', gap: 6, marginBottom: 10 },
-    yearBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: '#0f172a' },
-    yearBtnActive: { backgroundColor: '#6366f1' },
-    yearText: { color: '#64748b', fontSize: 11, fontWeight: '600' },
-    yearTextActive: { color: '#fff' },
+    monthRow: { marginBottom: 6 },
+    yearRow: { marginBottom: 8 },
+    chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, marginRight: 6, backgroundColor: C.surfaceAlt },
+    chipText: { fontSize: 12, fontWeight: '600', color: C.textSub },
 
-    summaryRow: { flexDirection: 'row', gap: 6, marginBottom: 10 },
-    summaryCard: { flex: 1, borderRadius: 10, padding: 8, alignItems: 'center' },
-    summaryVal: { fontSize: 18, fontWeight: 'bold' },
-    summaryLabel: { fontSize: 9, fontWeight: '600', marginTop: 2 },
+    statsRow: { marginBottom: 8 },
+    statChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginRight: 6, alignItems: 'center' },
+    statVal: { fontSize: 16, fontWeight: '800' },
+    statLabel: { fontSize: 10, fontWeight: '600' },
 
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    emptyIcon: { fontSize: 36, marginBottom: 8 },
-    emptyText: { color: '#475569', fontSize: 12 },
-
-    attCard: {
-        backgroundColor: '#1e293b', borderRadius: 10, padding: 10,
-        marginBottom: 8, borderWidth: 1, borderColor: '#334155',
+    filterWrap: { marginBottom: 10 },
+    filterTabs: { gap: 6, paddingVertical: 2 },
+    filterTab: {
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        paddingHorizontal: 12, paddingVertical: 6,
+        borderRadius: 20, backgroundColor: C.surfaceAlt,
+        borderWidth: 1, borderColor: C.border,
     },
-    attTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-    attDate: { color: '#f8fafc', fontSize: 12, fontWeight: '700', flex: 1 },
-    attBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, marginHorizontal: 6 },
-    attBadgeText: { fontSize: 10, fontWeight: '600' },
-    attHours: { color: '#64748b', fontSize: 11 },
+    filterDot: { width: 6, height: 6, borderRadius: 3 },
+    filterTabText: { fontSize: 12, fontWeight: '600', color: C.textSub },
 
-    attTimes: { flexDirection: 'row', gap: 16 },
-    punchIn: { color: '#22c55e', fontSize: 11 },
-    punchOut: { color: '#ef4444', fontSize: 11 },
+    attRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 },
+    dateBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    dateText: { fontSize: 14, fontWeight: '800' },
+    attPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, alignSelf: 'flex-start', marginBottom: 2 },
+    attPillText: { fontSize: 11, fontWeight: '700' },
+    timeText: { fontSize: 11, color: C.textMuted },
+    empty: { color: C.textMuted, textAlign: 'center', marginTop: 40 },
 });

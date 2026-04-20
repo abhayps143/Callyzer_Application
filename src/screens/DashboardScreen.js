@@ -1,10 +1,339 @@
+// import React, { useState, useEffect, useContext, useCallback } from 'react';
+// import {
+//     View, Text, ScrollView, StyleSheet,
+//     TouchableOpacity, ActivityIndicator, RefreshControl
+// } from 'react-native';
+// import { AuthContext } from '../context/AuthContext';
+// import { api } from '../services/api';
+
+// const fmtDuration = (s) => {
+//     if (!s) return '0s';
+//     const m = Math.floor(s / 60);
+//     const sec = s % 60;
+//     return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+// };
+
+// const fmtTime = (d) => {
+//     if (!d) return '';
+//     return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+// };
+
+// const StatusBadge = ({ status }) => {
+//     const cfg = {
+//         Connected: { bg: '#22c55e20', color: '#22c55e' },
+//         Missed: { bg: '#ef444420', color: '#ef4444' },
+//         Rejected: { bg: '#f59e0b20', color: '#f59e0b' },
+//     };
+//     const c = cfg[status] || cfg.Missed;
+//     return (
+//         <View style={[styles.badge, { backgroundColor: c.bg }]}>
+//             <Text style={[styles.badgeText, { color: c.color }]}>{status}</Text>
+//         </View>
+//     );
+// };
+
+// const TypeBadge = ({ type }) => {
+//     const isIncoming = type === 'Incoming';
+//     return (
+//         <View style={[styles.badge, { backgroundColor: isIncoming ? '#3b82f620' : '#8b5cf620' }]}>
+//             <Text style={[styles.badgeText, { color: isIncoming ? '#3b82f6' : '#8b5cf6' }]}>
+//                 {isIncoming ? '↙ Incoming' : '↗ Outgoing'}
+//             </Text>
+//         </View>
+//     );
+// };
+
+// const SummaryCard = ({ title, value, change, up, icon, color }) => (
+//     <View style={[styles.summaryCard, { borderLeftColor: color }]}>
+//         <View style={styles.summaryCardHeader}>
+//             <View style={[styles.summaryIconBox, { backgroundColor: color + '20' }]}>
+//                 <Text style={[styles.summaryIcon, { color }]}>{icon}</Text>
+//             </View>
+//             <View style={[styles.changeBadge, { backgroundColor: up ? '#22c55e20' : '#ef444420' }]}>
+//                 <Text style={[styles.changeText, { color: up ? '#22c55e' : '#ef4444' }]}>
+//                     {up ? '↑' : '↓'} {change}
+//                 </Text>
+//             </View>
+//         </View>
+//         <Text style={styles.summaryValue}>{value}</Text>
+//         <Text style={styles.summaryLabel}>{title}</Text>
+//     </View>
+// );
+
+// export default function DashboardScreen() {
+//     const { user, logout } = useContext(AuthContext);
+//     const [data, setData] = useState(null);
+//     const [progress, setProgress] = useState(null);
+//     const [loading, setLoading] = useState(true);
+//     const [refreshing, setRefreshing] = useState(false);
+//     const [error, setError] = useState('');
+
+//     const fetchData = useCallback(async () => {
+//         setError('');
+//         try {
+//             const [dashRes, progressRes] = await Promise.allSettled([
+//                 api.getDashboardStats(),
+//                 api.getMyProgress(),
+//             ]);
+
+//             if (dashRes.status === 'fulfilled') setData(dashRes.value);
+//             else setError('Dashboard load nahi hua');
+
+//             if (progressRes.status === 'fulfilled') setProgress(progressRes.value);
+//         } catch (e) {
+//             setError('Server se connect nahi ho pa raha');
+//         } finally {
+//             setLoading(false);
+//             setRefreshing(false);
+//         }
+//     }, []);
+
+//     useEffect(() => { fetchData(); }, [fetchData]);
+
+//     const onRefresh = () => { setRefreshing(true); fetchData(); };
+
+//     if (loading) {
+//         return (
+//             <View style={styles.center}>
+//                 <ActivityIndicator size="large" color="#6366f1" />
+//                 <Text style={styles.loadingText}>Loading dashboard...</Text>
+//             </View>
+//         );
+//     }
+
+//     const { summary, weeklyTrend, recentCalls, topAgents } = data || {};
+
+//     const summaryCards = summary ? [
+//         { title: 'Total Calls', value: summary.totalCalls?.toLocaleString() || '0', change: `${summary.connectRate || 0}%`, up: true, icon: '📞', color: '#6366f1' },
+//         { title: 'Incoming', value: summary.incomingCalls?.toLocaleString() || '0', change: '+8%', up: true, icon: '↙️', color: '#3b82f6' },
+//         { title: 'Outgoing', value: summary.outgoingCalls?.toLocaleString() || '0', change: '+3%', up: true, icon: '↗️', color: '#8b5cf6' },
+//         { title: 'Missed', value: summary.missedCalls?.toLocaleString() || '0', change: '-4.6%', up: false, icon: '❌', color: '#ef4444' },
+//     ] : [];
+
+//     const maxTotal = weeklyTrend ? Math.max(...weeklyTrend.map(d => d.total), 1) : 1;
+
+//     return (
+//         <ScrollView
+//             style={styles.container}
+//             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
+//         >
+//             {/* Header */}
+//             <View style={styles.header}>
+//                 <View>
+//                     <Text style={styles.welcome}>Welcome back 👋</Text>
+//                     <Text style={styles.userName}>{user?.name || 'User'}</Text>
+//                     <Text style={styles.userRole}>{user?.role || ''}</Text>
+//                 </View>
+//                 <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+//                     <Text style={styles.logoutText}>Logout</Text>
+//                 </TouchableOpacity>
+//             </View>
+
+//             {error ? (
+//                 <View style={styles.errorBox}>
+//                     <Text style={styles.errorText}>⚠️ {error}</Text>
+//                     <TouchableOpacity onPress={fetchData}>
+//                         <Text style={styles.retryText}>Retry →</Text>
+//                     </TouchableOpacity>
+//                 </View>
+//             ) : null}
+
+//             {/* Summary Cards */}
+//             <Text style={styles.sectionTitle}>Today's Overview</Text>
+//             <View style={styles.summaryGrid}>
+//                 {summaryCards.map((card, i) => (
+//                     <SummaryCard key={i} {...card} />
+//                 ))}
+//             </View>
+
+//             {/* Connect Rate */}
+//             {summary?.connectRate !== undefined && (
+//                 <View style={styles.rateCard}>
+//                     <Text style={styles.rateLabel}>Connect Rate</Text>
+//                     <View style={styles.rateBarBg}>
+//                         <View style={[styles.rateBarFill, { width: `${Math.min(summary.connectRate, 100)}%` }]} />
+//                     </View>
+//                     <Text style={styles.rateValue}>{summary.connectRate}%</Text>
+//                 </View>
+//             )}
+
+//             {/* Progress Cards */}
+//             {progress && (
+//                 <View>
+//                     <Text style={styles.sectionTitle}>Target Progress</Text>
+//                     <View style={styles.progressCard}>
+//                         <View style={styles.progressHeader}>
+//                             <Text style={styles.progressLabel}>🎯 Today's Target</Text>
+//                             <Text style={styles.progressNumbers}>{progress.daily?.achieved || 0} / {progress.daily?.target || 0}</Text>
+//                         </View>
+//                         <View style={styles.progressBarBg}>
+//                             <View style={[styles.progressBarFill, { width: `${Math.min(progress.daily?.percentage || 0, 100)}%`, backgroundColor: '#3b82f6' }]} />
+//                         </View>
+//                         <Text style={styles.progressPct}>{progress.daily?.percentage || 0}% completed</Text>
+//                     </View>
+//                     <View style={styles.progressCard}>
+//                         <View style={styles.progressHeader}>
+//                             <Text style={styles.progressLabel}>📊 Monthly Target</Text>
+//                             <Text style={styles.progressNumbers}>{progress.monthly?.achieved || 0} / {progress.monthly?.target || 0}</Text>
+//                         </View>
+//                         <View style={styles.progressBarBg}>
+//                             <View style={[styles.progressBarFill, { width: `${Math.min(progress.monthly?.percentage || 0, 100)}%`, backgroundColor: '#8b5cf6' }]} />
+//                         </View>
+//                         <Text style={styles.progressPct}>{progress.monthly?.percentage || 0}% completed</Text>
+//                     </View>
+//                 </View>
+//             )}
+
+//             {/* Weekly Bar Chart */}
+//             {weeklyTrend && weeklyTrend.length > 0 && (
+//                 <View style={styles.chartCard}>
+//                     <Text style={styles.sectionTitle}>Weekly Activity</Text>
+//                     <View style={styles.chartBars}>
+//                         {weeklyTrend.map((d, i) => {
+//                             const height = Math.max(((d.total / maxTotal) * 80), 4);
+//                             return (
+//                                 <View key={i} style={styles.barColumn}>
+//                                     <Text style={styles.barValue}>{d.total}</Text>
+//                                     <View style={[styles.bar, { height }]} />
+//                                     <Text style={styles.barLabel}>{d.day}</Text>
+//                                 </View>
+//                             );
+//                         })}
+//                     </View>
+//                 </View>
+//             )}
+
+//             {/* Top Agents */}
+//             {topAgents && topAgents.length > 0 && (
+//                 <View style={styles.agentCard}>
+//                     <Text style={styles.sectionTitle}>Top Agents</Text>
+//                     {topAgents.slice(0, 5).map((agent, i) => {
+//                         const rate = agent.calls > 0 ? Math.round((agent.connected / agent.calls) * 100) : 0;
+//                         return (
+//                             <View key={i} style={styles.agentRow}>
+//                                 <View style={[styles.agentAvatar, { backgroundColor: agent.color || '#6366f1' }]}>
+//                                     <Text style={styles.agentAvatarText}>{agent.avatar || (agent.name || 'U').charAt(0)}</Text>
+//                                 </View>
+//                                 <View style={styles.agentInfo}>
+//                                     <Text style={styles.agentName}>{agent.name}</Text>
+//                                     <View style={styles.agentBarBg}>
+//                                         <View style={[styles.agentBarFill, { width: `${rate}%`, backgroundColor: agent.color || '#6366f1' }]} />
+//                                     </View>
+//                                 </View>
+//                                 <Text style={styles.agentRate}>{rate}%</Text>
+//                             </View>
+//                         );
+//                     })}
+//                 </View>
+//             )}
+
+//             {/* Recent Calls */}
+//             {recentCalls && recentCalls.length > 0 && (
+//                 <View style={styles.recentCard}>
+//                     <Text style={styles.sectionTitle}>Recent Calls</Text>
+//                     {recentCalls.slice(0, 8).map((call, i) => (
+//                         <View key={i} style={[styles.recentRow, i < recentCalls.length - 1 && styles.recentBorder]}>
+//                             <View style={styles.recentAvatar}>
+//                                 <Text style={styles.recentAvatarText}>{call.avatar || (call.name || 'U').charAt(0)}</Text>
+//                             </View>
+//                             <View style={styles.recentInfo}>
+//                                 <Text style={styles.recentName}>{call.name || 'Unknown'}</Text>
+//                                 <Text style={styles.recentNumber}>{call.number}</Text>
+//                             </View>
+//                             <View style={styles.recentRight}>
+//                                 <StatusBadge status={call.status} />
+//                                 <Text style={styles.recentTime}>{call.time || fmtTime(call.calledAt)}</Text>
+//                             </View>
+//                         </View>
+//                     ))}
+//                 </View>
+//             )}
+
+//             <View style={{ height: 30 }} />
+//         </ScrollView>
+//     );
+// }
+
+// const styles = StyleSheet.create({
+//     container: { flex: 1, backgroundColor: '#0f172a' },
+//     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' },
+//     loadingText: { color: '#94a3b8', marginTop: 12, fontSize: 14 },
+//     header: {
+//         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+//         padding: 20, paddingTop: 50, backgroundColor: '#1e293b',
+//         borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 20,
+//     },
+//     welcome: { color: '#94a3b8', fontSize: 14 },
+//     userName: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginTop: 4 },
+//     userRole: { color: '#6366f1', fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
+//     logoutBtn: { backgroundColor: '#ef444420', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+//     logoutText: { color: '#ef4444', fontWeight: '600' },
+//     errorBox: { backgroundColor: '#ef444420', margin: 16, padding: 14, borderRadius: 12 },
+//     errorText: { color: '#ef4444', fontSize: 14 },
+//     retryText: { color: '#ef4444', fontWeight: '600', marginTop: 8 },
+//     sectionTitle: { color: '#94a3b8', fontSize: 13, fontWeight: '600', paddingHorizontal: 16, marginBottom: 10, marginTop: 4 },
+//     summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10 },
+//     summaryCard: {
+//         backgroundColor: '#1e293b', borderRadius: 12, padding: 14,
+//         margin: 6, width: '44%', borderLeftWidth: 3,
+//     },
+//     summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+//     summaryIconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+//     summaryIcon: { fontSize: 20 },
+//     changeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+//     changeText: { fontSize: 11, fontWeight: '600' },
+//     summaryValue: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+//     summaryLabel: { color: '#64748b', fontSize: 11, marginTop: 4 },
+//     rateCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 8, padding: 16, borderRadius: 12 },
+//     rateLabel: { color: '#94a3b8', fontSize: 13, marginBottom: 8 },
+//     rateBarBg: { backgroundColor: '#0f172a', borderRadius: 4, height: 8, marginBottom: 6 },
+//     rateBarFill: { backgroundColor: '#6366f1', height: 8, borderRadius: 4 },
+//     rateValue: { color: '#6366f1', fontWeight: 'bold', fontSize: 16 },
+//     progressCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 8, padding: 16, borderRadius: 12 },
+//     progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+//     progressLabel: { color: '#fff', fontWeight: '600', fontSize: 14 },
+//     progressNumbers: { color: '#94a3b8', fontSize: 13 },
+//     progressBarBg: { backgroundColor: '#0f172a', borderRadius: 4, height: 8, marginBottom: 6 },
+//     progressBarFill: { height: 8, borderRadius: 4 },
+//     progressPct: { color: '#64748b', fontSize: 12 },
+//     chartCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 8 },
+//     chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 110, justifyContent: 'space-between' },
+//     barColumn: { flex: 1, alignItems: 'center', gap: 4 },
+//     barValue: { color: '#64748b', fontSize: 10, marginBottom: 4 },
+//     bar: { width: 20, backgroundColor: '#6366f1', borderRadius: 4, minHeight: 4 },
+//     barLabel: { color: '#64748b', fontSize: 11, marginTop: 4 },
+//     agentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 8 },
+//     agentRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+//     agentAvatar: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+//     agentAvatarText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+//     agentInfo: { flex: 1 },
+//     agentName: { color: '#fff', fontWeight: '600', fontSize: 14, marginBottom: 4 },
+//     agentBarBg: { backgroundColor: '#0f172a', borderRadius: 3, height: 6 },
+//     agentBarFill: { height: 6, borderRadius: 3 },
+//     agentRate: { color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginLeft: 8 },
+//     recentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
+//     recentRow: { flexDirection: 'row', alignItems: 'center', padding: 14 },
+//     recentBorder: { borderBottomWidth: 1, borderBottomColor: '#0f172a' },
+//     recentAvatar: { width: 36, height: 36, backgroundColor: '#6366f120', borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+//     recentAvatarText: { color: '#6366f1', fontWeight: 'bold', fontSize: 14 },
+//     recentInfo: { flex: 1 },
+//     recentName: { color: '#fff', fontWeight: '600', fontSize: 14 },
+//     recentNumber: { color: '#64748b', fontSize: 12, marginTop: 2 },
+//     recentRight: { alignItems: 'flex-end', gap: 4 },
+//     recentTime: { color: '#475569', fontSize: 11, marginTop: 4 },
+//     badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+//     badgeText: { fontSize: 11, fontWeight: '600' },
+// });
+
+
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
     View, Text, ScrollView, StyleSheet,
-    TouchableOpacity, ActivityIndicator, RefreshControl
+    TouchableOpacity, ActivityIndicator, RefreshControl, StatusBar
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
+import { C, shadow } from '../theme';
 
 const fmtDuration = (s) => {
     if (!s) return '0s';
@@ -12,61 +341,49 @@ const fmtDuration = (s) => {
     const sec = s % 60;
     return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
 };
-
 const fmtTime = (d) => {
     if (!d) return '';
     return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
-const StatusBadge = ({ status }) => {
+const StatusPill = ({ status }) => {
     const cfg = {
-        Connected: { bg: '#22c55e20', color: '#22c55e' },
-        Missed: { bg: '#ef444420', color: '#ef4444' },
-        Rejected: { bg: '#f59e0b20', color: '#f59e0b' },
+        Connected: { bg: C.greenSoft,  color: C.green  },
+        Missed:    { bg: C.redSoft,    color: C.red    },
+        Rejected:  { bg: C.amberSoft,  color: C.amber  },
     };
     const c = cfg[status] || cfg.Missed;
     return (
-        <View style={[styles.badge, { backgroundColor: c.bg }]}>
-            <Text style={[styles.badgeText, { color: c.color }]}>{status}</Text>
+        <View style={[styles.pill, { backgroundColor: c.bg }]}>
+            <Text style={[styles.pillText, { color: c.color }]}>{status}</Text>
         </View>
     );
 };
 
-const TypeBadge = ({ type }) => {
-    const isIncoming = type === 'Incoming';
-    return (
-        <View style={[styles.badge, { backgroundColor: isIncoming ? '#3b82f620' : '#8b5cf620' }]}>
-            <Text style={[styles.badgeText, { color: isIncoming ? '#3b82f6' : '#8b5cf6' }]}>
-                {isIncoming ? '↙ Incoming' : '↗ Outgoing'}
-            </Text>
+const MetricCard = ({ title, value, icon, color, soft, change, up }) => (
+    <View style={[styles.metricCard, { backgroundColor: C.surface }]}>
+        <View style={[styles.metricIcon, { backgroundColor: soft }]}>
+            <Text style={{ fontSize: 20 }}>{icon}</Text>
         </View>
-    );
-};
-
-const SummaryCard = ({ title, value, change, up, icon, color }) => (
-    <View style={[styles.summaryCard, { borderLeftColor: color }]}>
-        <View style={styles.summaryCardHeader}>
-            <View style={[styles.summaryIconBox, { backgroundColor: color + '20' }]}>
-                <Text style={[styles.summaryIcon, { color }]}>{icon}</Text>
-            </View>
-            <View style={[styles.changeBadge, { backgroundColor: up ? '#22c55e20' : '#ef444420' }]}>
-                <Text style={[styles.changeText, { color: up ? '#22c55e' : '#ef4444' }]}>
+        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={styles.metricTitle}>{title}</Text>
+        {change !== undefined && (
+            <View style={[styles.changePill, { backgroundColor: up ? C.greenSoft : C.redSoft }]}>
+                <Text style={[styles.changeText, { color: up ? C.green : C.red }]}>
                     {up ? '↑' : '↓'} {change}
                 </Text>
             </View>
-        </View>
-        <Text style={styles.summaryValue}>{value}</Text>
-        <Text style={styles.summaryLabel}>{title}</Text>
+        )}
     </View>
 );
 
 export default function DashboardScreen() {
     const { user, logout } = useContext(AuthContext);
-    const [data, setData] = useState(null);
+    const [data, setData]         = useState(null);
     const [progress, setProgress] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading]   = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError]       = useState('');
 
     const fetchData = useCallback(async () => {
         setError('');
@@ -75,13 +392,11 @@ export default function DashboardScreen() {
                 api.getDashboardStats(),
                 api.getMyProgress(),
             ]);
-
             if (dashRes.status === 'fulfilled') setData(dashRes.value);
-            else setError('Dashboard load nahi hua');
-
+            else setError('Dashboard failed to load.');
             if (progressRes.status === 'fulfilled') setProgress(progressRes.value);
-        } catch (e) {
-            setError('Server se connect nahi ho pa raha');
+        } catch {
+            setError('Unable to connect to server.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -90,112 +405,107 @@ export default function DashboardScreen() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    const onRefresh = () => { setRefreshing(true); fetchData(); };
-
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#6366f1" />
-                <Text style={styles.loadingText}>Loading dashboard...</Text>
-            </View>
-        );
-    }
+    if (loading) return (
+        <View style={styles.center}>
+            <ActivityIndicator size="large" color={C.primary} />
+        </View>
+    );
 
     const { summary, weeklyTrend, recentCalls, topAgents } = data || {};
-
-    const summaryCards = summary ? [
-        { title: 'Total Calls', value: summary.totalCalls?.toLocaleString() || '0', change: `${summary.connectRate || 0}%`, up: true, icon: '📞', color: '#6366f1' },
-        { title: 'Incoming', value: summary.incomingCalls?.toLocaleString() || '0', change: '+8%', up: true, icon: '↙️', color: '#3b82f6' },
-        { title: 'Outgoing', value: summary.outgoingCalls?.toLocaleString() || '0', change: '+3%', up: true, icon: '↗️', color: '#8b5cf6' },
-        { title: 'Missed', value: summary.missedCalls?.toLocaleString() || '0', change: '-4.6%', up: false, icon: '❌', color: '#ef4444' },
-    ] : [];
-
     const maxTotal = weeklyTrend ? Math.max(...weeklyTrend.map(d => d.total), 1) : 1;
+
+    const metrics = summary ? [
+        { title: 'Total Calls', value: summary.totalCalls?.toLocaleString() || '0', icon: '📞', color: C.primary,  soft: C.primarySoft, change: `${summary.connectRate || 0}%`, up: true  },
+        { title: 'Incoming',    value: summary.incomingCalls?.toLocaleString() || '0', icon: '↙️', color: C.blue,    soft: C.blueSoft,    change: '+8%', up: true  },
+        { title: 'Outgoing',    value: summary.outgoingCalls?.toLocaleString() || '0', icon: '↗️', color: C.purple,  soft: C.purpleSoft,  change: '+3%', up: true  },
+        { title: 'Missed',      value: summary.missedCalls?.toLocaleString()  || '0', icon: '⚠️', color: C.red,     soft: C.redSoft,     change: '-4.6%', up: false },
+    ] : [];
 
     return (
         <ScrollView
             style={styles.container}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
+            contentContainerStyle={styles.content}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor={C.primary} />}
         >
+            <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.welcome}>Welcome back 👋</Text>
+                    <Text style={styles.greeting}>Good day 👋</Text>
                     <Text style={styles.userName}>{user?.name || 'User'}</Text>
-                    <Text style={styles.userRole}>{user?.role || ''}</Text>
+                    <View style={styles.rolePill}>
+                        <Text style={styles.roleText}>{user?.role || ''}</Text>
+                    </View>
                 </View>
                 <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-                    <Text style={styles.logoutText}>Logout</Text>
+                    <Text style={styles.logoutText}>Sign out</Text>
                 </TouchableOpacity>
             </View>
 
-            {error ? (
-                <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>⚠️ {error}</Text>
+            {/* Error */}
+            {!!error && (
+                <View style={styles.errorBanner}>
+                    <Text style={styles.errorMsg}>⚠️  {error}</Text>
                     <TouchableOpacity onPress={fetchData}>
-                        <Text style={styles.retryText}>Retry →</Text>
+                        <Text style={styles.retryLink}>Retry</Text>
                     </TouchableOpacity>
                 </View>
-            ) : null}
+            )}
 
-            {/* Summary Cards */}
-            <Text style={styles.sectionTitle}>Today's Overview</Text>
-            <View style={styles.summaryGrid}>
-                {summaryCards.map((card, i) => (
-                    <SummaryCard key={i} {...card} />
-                ))}
+            {/* Metrics */}
+            <Text style={styles.sectionLabel}>TODAY'S OVERVIEW</Text>
+            <View style={styles.metricsGrid}>
+                {metrics.map((m, i) => <MetricCard key={i} {...m} />)}
             </View>
 
             {/* Connect Rate */}
             {summary?.connectRate !== undefined && (
-                <View style={styles.rateCard}>
-                    <Text style={styles.rateLabel}>Connect Rate</Text>
-                    <View style={styles.rateBarBg}>
-                        <View style={[styles.rateBarFill, { width: `${Math.min(summary.connectRate, 100)}%` }]} />
+                <View style={styles.card}>
+                    <View style={styles.cardRow}>
+                        <Text style={styles.cardTitle}>Connect Rate</Text>
+                        <Text style={[styles.boldVal, { color: C.primary }]}>{summary.connectRate}%</Text>
                     </View>
-                    <Text style={styles.rateValue}>{summary.connectRate}%</Text>
+                    <View style={styles.barBg}>
+                        <View style={[styles.barFill, { width: `${Math.min(summary.connectRate, 100)}%`, backgroundColor: C.primary }]} />
+                    </View>
                 </View>
             )}
 
-            {/* Progress Cards */}
+            {/* Progress */}
             {progress && (
-                <View>
-                    <Text style={styles.sectionTitle}>Target Progress</Text>
-                    <View style={styles.progressCard}>
-                        <View style={styles.progressHeader}>
-                            <Text style={styles.progressLabel}>🎯 Today's Target</Text>
-                            <Text style={styles.progressNumbers}>{progress.daily?.achieved || 0} / {progress.daily?.target || 0}</Text>
+                <>
+                    <Text style={styles.sectionLabel}>TARGET PROGRESS</Text>
+                    {[
+                        { label: "Today's Target",  data: progress.daily,   color: C.blue   },
+                        { label: 'Monthly Target', data: progress.monthly, color: C.purple },
+                    ].map(({ label, data: d, color }) => (
+                        <View key={label} style={styles.card}>
+                            <View style={styles.cardRow}>
+                                <Text style={styles.cardTitle}>{label}</Text>
+                                <Text style={styles.textSub}>{d?.achieved || 0} / {d?.target || 0}</Text>
+                            </View>
+                            <View style={styles.barBg}>
+                                <View style={[styles.barFill, { width: `${Math.min(d?.percentage || 0, 100)}%`, backgroundColor: color }]} />
+                            </View>
+                            <Text style={[styles.pctText, { color }]}>{d?.percentage || 0}% completed</Text>
                         </View>
-                        <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { width: `${Math.min(progress.daily?.percentage || 0, 100)}%`, backgroundColor: '#3b82f6' }]} />
-                        </View>
-                        <Text style={styles.progressPct}>{progress.daily?.percentage || 0}% completed</Text>
-                    </View>
-                    <View style={styles.progressCard}>
-                        <View style={styles.progressHeader}>
-                            <Text style={styles.progressLabel}>📊 Monthly Target</Text>
-                            <Text style={styles.progressNumbers}>{progress.monthly?.achieved || 0} / {progress.monthly?.target || 0}</Text>
-                        </View>
-                        <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { width: `${Math.min(progress.monthly?.percentage || 0, 100)}%`, backgroundColor: '#8b5cf6' }]} />
-                        </View>
-                        <Text style={styles.progressPct}>{progress.monthly?.percentage || 0}% completed</Text>
-                    </View>
-                </View>
+                    ))}
+                </>
             )}
 
-            {/* Weekly Bar Chart */}
+            {/* Weekly Chart */}
             {weeklyTrend && weeklyTrend.length > 0 && (
-                <View style={styles.chartCard}>
-                    <Text style={styles.sectionTitle}>Weekly Activity</Text>
-                    <View style={styles.chartBars}>
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Weekly Activity</Text>
+                    <View style={styles.chartRow}>
                         {weeklyTrend.map((d, i) => {
-                            const height = Math.max(((d.total / maxTotal) * 80), 4);
+                            const h = Math.max(((d.total / maxTotal) * 80), 4);
                             return (
-                                <View key={i} style={styles.barColumn}>
-                                    <Text style={styles.barValue}>{d.total}</Text>
-                                    <View style={[styles.bar, { height }]} />
-                                    <Text style={styles.barLabel}>{d.day}</Text>
+                                <View key={i} style={styles.barCol}>
+                                    <Text style={styles.barValLabel}>{d.total}</Text>
+                                    <View style={[styles.chartBar, { height: h }]} />
+                                    <Text style={styles.barDayLabel}>{d.day}</Text>
                                 </View>
                             );
                         })}
@@ -205,22 +515,26 @@ export default function DashboardScreen() {
 
             {/* Top Agents */}
             {topAgents && topAgents.length > 0 && (
-                <View style={styles.agentCard}>
-                    <Text style={styles.sectionTitle}>Top Agents</Text>
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Top Agents</Text>
                     {topAgents.slice(0, 5).map((agent, i) => {
                         const rate = agent.calls > 0 ? Math.round((agent.connected / agent.calls) * 100) : 0;
                         return (
                             <View key={i} style={styles.agentRow}>
-                                <View style={[styles.agentAvatar, { backgroundColor: agent.color || '#6366f1' }]}>
-                                    <Text style={styles.agentAvatarText}>{agent.avatar || (agent.name || 'U').charAt(0)}</Text>
+                                <View style={[styles.avatar, { backgroundColor: C.primarySoft }]}>
+                                    <Text style={[styles.avatarText, { color: C.primary }]}>
+                                        {(agent.name || 'U').charAt(0)}
+                                    </Text>
                                 </View>
-                                <View style={styles.agentInfo}>
-                                    <Text style={styles.agentName}>{agent.name}</Text>
-                                    <View style={styles.agentBarBg}>
-                                        <View style={[styles.agentBarFill, { width: `${rate}%`, backgroundColor: agent.color || '#6366f1' }]} />
+                                <View style={{ flex: 1 }}>
+                                    <View style={styles.agentTop}>
+                                        <Text style={styles.agentName}>{agent.name}</Text>
+                                        <Text style={styles.agentRate}>{rate}%</Text>
+                                    </View>
+                                    <View style={styles.barBg}>
+                                        <View style={[styles.barFill, { width: `${rate}%`, backgroundColor: C.primary }]} />
                                     </View>
                                 </View>
-                                <Text style={styles.agentRate}>{rate}%</Text>
                             </View>
                         );
                     })}
@@ -229,98 +543,101 @@ export default function DashboardScreen() {
 
             {/* Recent Calls */}
             {recentCalls && recentCalls.length > 0 && (
-                <View style={styles.recentCard}>
-                    <Text style={styles.sectionTitle}>Recent Calls</Text>
+                <View style={[styles.card, { paddingHorizontal: 0, paddingVertical: 0, overflow: 'hidden' }]}>
+                    <Text style={[styles.cardTitle, { paddingHorizontal: 16, paddingTop: 16 }]}>Recent Calls</Text>
                     {recentCalls.slice(0, 8).map((call, i) => (
-                        <View key={i} style={[styles.recentRow, i < recentCalls.length - 1 && styles.recentBorder]}>
-                            <View style={styles.recentAvatar}>
-                                <Text style={styles.recentAvatarText}>{call.avatar || (call.name || 'U').charAt(0)}</Text>
+                        <View
+                            key={i}
+                            style={[styles.callRow, i < recentCalls.length - 1 && styles.callDivider]}
+                        >
+                            <View style={styles.callAvatar}>
+                                <Text style={styles.callAvatarText}>{(call.name || 'U').charAt(0)}</Text>
                             </View>
-                            <View style={styles.recentInfo}>
-                                <Text style={styles.recentName}>{call.name || 'Unknown'}</Text>
-                                <Text style={styles.recentNumber}>{call.number}</Text>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.callName}>{call.name || 'Unknown'}</Text>
+                                <Text style={styles.callNumber}>{call.number}</Text>
                             </View>
-                            <View style={styles.recentRight}>
-                                <StatusBadge status={call.status} />
-                                <Text style={styles.recentTime}>{call.time || fmtTime(call.calledAt)}</Text>
+                            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                                <StatusPill status={call.status} />
+                                <Text style={styles.callTime}>{call.time || fmtTime(call.calledAt)}</Text>
                             </View>
                         </View>
                     ))}
                 </View>
             )}
 
-            <View style={{ height: 30 }} />
+            <View style={{ height: 32 }} />
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#0f172a' },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' },
-    loadingText: { color: '#94a3b8', marginTop: 12, fontSize: 14 },
+    container:  { flex: 1, backgroundColor: C.bg },
+    content:    { paddingBottom: 20 },
+    center:     { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
+
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-        padding: 20, paddingTop: 50, backgroundColor: '#1e293b',
-        borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 20,
+        paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20,
+        backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border,
+        marginBottom: 16,
     },
-    welcome: { color: '#94a3b8', fontSize: 14 },
-    userName: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginTop: 4 },
-    userRole: { color: '#6366f1', fontSize: 13, marginTop: 2, textTransform: 'capitalize' },
-    logoutBtn: { backgroundColor: '#ef444420', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-    logoutText: { color: '#ef4444', fontWeight: '600' },
-    errorBox: { backgroundColor: '#ef444420', margin: 16, padding: 14, borderRadius: 12 },
-    errorText: { color: '#ef4444', fontSize: 14 },
-    retryText: { color: '#ef4444', fontWeight: '600', marginTop: 8 },
-    sectionTitle: { color: '#94a3b8', fontSize: 13, fontWeight: '600', paddingHorizontal: 16, marginBottom: 10, marginTop: 4 },
-    summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10 },
-    summaryCard: {
-        backgroundColor: '#1e293b', borderRadius: 12, padding: 14,
-        margin: 6, width: '44%', borderLeftWidth: 3,
+    greeting:   { fontSize: 13, color: C.textSub },
+    userName:   { fontSize: 22, fontWeight: '800', color: C.text, marginTop: 2 },
+    rolePill:   { marginTop: 6, backgroundColor: C.primarySoft, borderRadius: 20, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3 },
+    roleText:   { fontSize: 11, fontWeight: '600', color: C.primary, textTransform: 'capitalize' },
+    logoutBtn:  { backgroundColor: C.redSoft, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
+    logoutText: { color: C.red, fontWeight: '700', fontSize: 13 },
+
+    errorBanner:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: C.redSoft, marginHorizontal: 16, padding: 14, borderRadius: 12, marginBottom: 12 },
+    errorMsg:   { color: C.red, fontSize: 13 },
+    retryLink:  { color: C.red, fontWeight: '700' },
+
+    sectionLabel:{ fontSize: 11, fontWeight: '700', color: C.textMuted, letterSpacing: 1, paddingHorizontal: 16, marginTop: 8, marginBottom: 10 },
+
+    metricsGrid:{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, gap: 10, marginBottom: 12 },
+    metricCard: {
+        width: '47%', borderRadius: 16, padding: 16,
+        marginHorizontal: 2, ...shadow,
     },
-    summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-    summaryIconBox: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-    summaryIcon: { fontSize: 20 },
-    changeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-    changeText: { fontSize: 11, fontWeight: '600' },
-    summaryValue: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-    summaryLabel: { color: '#64748b', fontSize: 11, marginTop: 4 },
-    rateCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 8, padding: 16, borderRadius: 12 },
-    rateLabel: { color: '#94a3b8', fontSize: 13, marginBottom: 8 },
-    rateBarBg: { backgroundColor: '#0f172a', borderRadius: 4, height: 8, marginBottom: 6 },
-    rateBarFill: { backgroundColor: '#6366f1', height: 8, borderRadius: 4 },
-    rateValue: { color: '#6366f1', fontWeight: 'bold', fontSize: 16 },
-    progressCard: { backgroundColor: '#1e293b', marginHorizontal: 16, marginBottom: 8, padding: 16, borderRadius: 12 },
-    progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-    progressLabel: { color: '#fff', fontWeight: '600', fontSize: 14 },
-    progressNumbers: { color: '#94a3b8', fontSize: 13 },
-    progressBarBg: { backgroundColor: '#0f172a', borderRadius: 4, height: 8, marginBottom: 6 },
-    progressBarFill: { height: 8, borderRadius: 4 },
-    progressPct: { color: '#64748b', fontSize: 12 },
-    chartCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 8 },
-    chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 110, justifyContent: 'space-between' },
-    barColumn: { flex: 1, alignItems: 'center', gap: 4 },
-    barValue: { color: '#64748b', fontSize: 10, marginBottom: 4 },
-    bar: { width: 20, backgroundColor: '#6366f1', borderRadius: 4, minHeight: 4 },
-    barLabel: { color: '#64748b', fontSize: 11, marginTop: 4 },
-    agentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 8 },
-    agentRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-    agentAvatar: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    agentAvatarText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-    agentInfo: { flex: 1 },
-    agentName: { color: '#fff', fontWeight: '600', fontSize: 14, marginBottom: 4 },
-    agentBarBg: { backgroundColor: '#0f172a', borderRadius: 3, height: 6 },
-    agentBarFill: { height: 6, borderRadius: 3 },
-    agentRate: { color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginLeft: 8 },
-    recentCard: { backgroundColor: '#1e293b', marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
-    recentRow: { flexDirection: 'row', alignItems: 'center', padding: 14 },
-    recentBorder: { borderBottomWidth: 1, borderBottomColor: '#0f172a' },
-    recentAvatar: { width: 36, height: 36, backgroundColor: '#6366f120', borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    recentAvatarText: { color: '#6366f1', fontWeight: 'bold', fontSize: 14 },
-    recentInfo: { flex: 1 },
-    recentName: { color: '#fff', fontWeight: '600', fontSize: 14 },
-    recentNumber: { color: '#64748b', fontSize: 12, marginTop: 2 },
-    recentRight: { alignItems: 'flex-end', gap: 4 },
-    recentTime: { color: '#475569', fontSize: 11, marginTop: 4 },
-    badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-    badgeText: { fontSize: 11, fontWeight: '600' },
+    metricIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    metricValue:{ fontSize: 26, fontWeight: '800', color: C.text },
+    metricTitle:{ fontSize: 12, color: C.textSub, marginTop: 2 },
+    changePill: { marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+    changeText: { fontSize: 11, fontWeight: '700' },
+
+    card: { backgroundColor: C.surface, marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 16, ...shadow },
+    cardRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    cardTitle:  { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 12 },
+    boldVal:    { fontSize: 16, fontWeight: '800' },
+    textSub:    { fontSize: 13, color: C.textSub },
+
+    barBg:  { height: 6, backgroundColor: C.surfaceAlt, borderRadius: 3, overflow: 'hidden' },
+    barFill:{ height: 6, borderRadius: 3 },
+    pctText:{ fontSize: 12, marginTop: 6, fontWeight: '600' },
+
+    chartRow:   { flexDirection: 'row', alignItems: 'flex-end', height: 110, justifyContent: 'space-between' },
+    barCol:     { flex: 1, alignItems: 'center' },
+    barValLabel:{ color: C.textMuted, fontSize: 10, marginBottom: 4 },
+    chartBar:   { width: 22, backgroundColor: C.primary, borderRadius: 6, minHeight: 4 },
+    barDayLabel:{ color: C.textSub, fontSize: 11, marginTop: 6 },
+
+    agentRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+    agentTop:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+    agentName:  { fontSize: 14, fontWeight: '600', color: C.text },
+    agentRate:  { fontSize: 13, fontWeight: '700', color: C.textSub },
+
+    avatar:     { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { fontWeight: '700', fontSize: 14 },
+
+    callRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+    callDivider:{ borderBottomWidth: 1, borderBottomColor: C.border },
+    callAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.primarySoft, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    callAvatarText: { color: C.primary, fontWeight: '700', fontSize: 14 },
+    callName:   { fontSize: 14, fontWeight: '600', color: C.text },
+    callNumber: { fontSize: 12, color: C.textSub, marginTop: 2 },
+    callTime:   { fontSize: 11, color: C.textMuted },
+
+    pill:       { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
+    pillText:   { fontSize: 11, fontWeight: '700' },
 });
