@@ -311,3 +311,4 @@ const drawerStyles = StyleSheet.create({
     logoutIcon: { fontSize: 20, marginRight: 12 },
     logoutText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
 });
+

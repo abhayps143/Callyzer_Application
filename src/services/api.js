@@ -318,26 +318,80 @@ export const api = {
     },
 
     // ── CALL LOGS ─────────────────────────────────────────
+    // getCallLogs: async (params = {}) => {
+    //     const headers = await authHeaders();
+    //     const query = new URLSearchParams({
+    //         page: params.page || 1,
+    //         limit: params.limit || 20,
+    //         sortField: params.sortField || 'calledAt',
+    //         sortDir: params.sortDir || 'desc',
+    //         ...(params.search && { search: params.search }),
+    //         ...(params.callType && params.callType !== 'All' && { callType: params.callType }),
+    //         ...(params.callStatus && params.callStatus !== 'All' && { callStatus: params.callStatus }),
+    //         ...(params.dateFrom && { dateFrom: params.dateFrom }),
+    //         ...(params.dateTo && { dateTo: params.dateTo }),
+    //     });
+    //     const res = await fetch(`${API_BASE_URL}/calls?${query}`, { headers });
+    //     return res.json();
+    // },
+    // api.js mein getCallLogs function ko REPLACE karo:
+
     getCallLogs: async (params = {}) => {
         const headers = await authHeaders();
-        const query = new URLSearchParams({
-            page: params.page || 1,
-            limit: params.limit || 20,
-            sortField: params.sortField || 'calledAt',
-            sortDir: params.sortDir || 'desc',
-            ...(params.search && { search: params.search }),
-            ...(params.callType && params.callType !== 'All' && { callType: params.callType }),
-            ...(params.callStatus && params.callStatus !== 'All' && { callStatus: params.callStatus }),
-            ...(params.dateFrom && { dateFrom: params.dateFrom }),
-            ...(params.dateTo && { dateTo: params.dateTo }),
-        });
+        const queryParams = new URLSearchParams();
+
+        // Always add these
+        queryParams.append('page', params.page || 1);
+        queryParams.append('limit', params.limit || 20);
+        queryParams.append('sortField', params.sortField || 'calledAt');
+        queryParams.append('sortDir', params.sortDir || 'desc');
+
+        // Add optional params ONLY if they have value and not 'All'
+        if (params.search && params.search.trim()) {
+            queryParams.append('search', params.search.trim());
+        }
+        if (params.callType && params.callType !== 'All') {
+            queryParams.append('callType', params.callType);
+        }
+        if (params.callStatus && params.callStatus !== 'All') {
+            queryParams.append('callStatus', params.callStatus);
+        }
+        if (params.dateFrom && params.dateFrom.trim()) {
+            queryParams.append('dateFrom', params.dateFrom);
+        }
+        if (params.dateTo && params.dateTo.trim()) {
+            queryParams.append('dateTo', params.dateTo);
+        }
+        if (params.agentId && params.agentId.trim()) {
+            queryParams.append('agentId', params.agentId);
+        }
+
+        const query = queryParams.toString();
+        console.log('📞 API Call URL:', `${API_BASE_URL}/calls?${query}`);
+
         const res = await fetch(`${API_BASE_URL}/calls?${query}`, { headers });
-        return res.json();
+        const data = await res.json();
+        console.log('📞 API Response:', data);
+        return data;
     },
 
-    getCallStats: async () => {
+    // getCallStats: async () => {
+    //     const headers = await authHeaders();
+    //     const res = await fetch(`${API_BASE_URL}/calls/stats`, { headers });
+    //     return res.json();
+    // },
+
+    getCallStats: async (params = {}) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/stats`, { headers });
+        const queryParams = new URLSearchParams();
+        if (params.callType) queryParams.append('callType', params.callType);
+        if (params.callStatus) queryParams.append('callStatus', params.callStatus);
+        if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
+        if (params.dateTo) queryParams.append('dateTo', params.dateTo);
+        if (params.agentId) queryParams.append('agentId', params.agentId);
+        if (params.search) queryParams.append('search', params.search);
+        const query = queryParams.toString();
+        const res = await fetch(`${API_BASE_URL}/calls/stats${query ? '?' + query : ''}`, { headers });
         return res.json();
     },
 
@@ -442,6 +496,17 @@ export const api = {
     getReports: async (period = 'month') => {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE_URL}/reports/summary?period=${period}`, { headers });
+        return res.json();
+    },
+
+    // Add this function to your api.js
+    bulkCreateCallLogs: async (calls) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ calls }),
+        });
         return res.json();
     },
 
