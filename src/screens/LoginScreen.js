@@ -486,6 +486,7 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import { C, shadow, shadowMd, rs, fs, radius, space } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -589,7 +590,11 @@ export default function LoginScreen() {
                                 style={styles.eyeBtn}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <Text style={styles.eyeIcon}>{pwdVisible ? '🙈' : '👁️'}</Text>
+                                <Ionicons
+                                    name={pwdVisible ? 'eye-outline' : 'eye-off-outline'}
+                                    size={fs(20)}
+                                    color={C.textSub}
+                                />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -736,9 +741,6 @@ const styles = StyleSheet.create({
     },
     eyeBtn: {
         paddingLeft: rs(8),
-    },
-    eyeIcon: {
-        fontSize: fs(18),
     },
 
     // ── Sign In button ─────────────────────
