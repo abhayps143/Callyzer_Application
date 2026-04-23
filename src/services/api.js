@@ -510,6 +510,24 @@ export const api = {
         return res.json();
     },
 
+    // ── DEVICE CALL SYNC ─────────────────────────────────
+    // Add this to your api object — needed by callLogService.js
+    syncDeviceCallLogs: async (calls) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ calls, source: 'device_sync' }),
+        });
+        return res.json();
+    },
+
+    getSyncStatus: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/calls/sync-status`, { headers });
+        return res.json();
+    },
+
     // ── LEAVES ───────────────────────────────────────────
     getMyLeaves: async () => {
         const headers = await authHeaders();
