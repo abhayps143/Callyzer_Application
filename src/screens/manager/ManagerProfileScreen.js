@@ -6,11 +6,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../../context/AuthContext';
 
-//Vianayk IP-Adress
-// const API = 'http://192.168.1.65:5000/api';
+import { API_BASE_URL as API } from '../../config';
 
-//Abhay IP-Adress
-const API = 'http://192.168.1.51:5000/api';
 
 export default function ManagerProfileScreen() {
   const { user, logout } = useContext(AuthContext);

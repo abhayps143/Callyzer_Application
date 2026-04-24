@@ -8,7 +8,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C, shadow } from '../../theme';
 
-const API = 'http://192.168.1.51:5000/api';
+import { API_BASE_URL as API } from '../../config';
 
 const PERIOD_CONFIG = {
   daily: { icon: '☀️', label: 'Daily', color: '#F97316', bg: '#FFF7ED', ring: '#F97316', desc: 'Resets every day' },

@@ -1442,6 +1442,7 @@ import {
 } from 'react-native';
 import { api } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config';
 
 const { width } = Dimensions.get('window');
 
@@ -2086,13 +2087,13 @@ export default function CallLogsScreen() {
             try {
                 const token = await AsyncStorage.getItem('token');
                 if (userRole === 'admin' || userRole === 'super_admin') {
-                    const res = await fetch(`http://192.168.1.51:5000/api/admin/users?role=agent&limit=100`, {
+                    const res = await fetch(`${API_BASE_URL}/admin/users?role=agent&limit=100`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     const data = await res.json();
                     setAgents(data.users || []);
                 } else if (userRole === 'manager') {
-                    const res = await fetch(`http://192.168.1.51:5000/api/manager/team?limit=100`, {
+                    const res = await fetch(`${API_BASE_URL}/manager/team?limit=100`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     const data = await res.json();

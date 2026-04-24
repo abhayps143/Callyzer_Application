@@ -3,8 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 
-// ── Config — keep in sync with api.js ────────────────
-const API_BASE_URL = 'http://192.168.1.51:5000/api';
+import { API_BASE_URL } from '../config';
 
 const LAST_SYNC_KEY = '@callyzer:lastSyncTs';
 const SYNC_LOCK_KEY = '@callyzer:syncLock';

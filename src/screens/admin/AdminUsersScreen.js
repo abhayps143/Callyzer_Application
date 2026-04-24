@@ -7,7 +7,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C, ROLE_COLORS, shadow } from '../../theme';
 
-const API = 'http://192.168.1.51:5000/api';
+import { API_BASE_URL as API } from '../../config';
 const ROLES = ['agent', 'team_leader', 'manager', 'hr', 'finance', 'admin'];
 const EMPTY = { name: '', email: '', password: '', role: 'agent', phone: '', isActive: true };
 
