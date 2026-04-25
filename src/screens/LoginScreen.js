@@ -3,7 +3,7 @@ import {
     View, Text, TextInput, TouchableOpacity,
     StyleSheet, Alert, ActivityIndicator,
     KeyboardAvoidingView, Platform, StatusBar,
-    ScrollView, Dimensions,
+    ScrollView, Dimensions,Modal,
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -19,6 +19,10 @@ export default function LoginScreen() {
     const [pwdVisible, setPwdVisible] = useState(false);
     const [focusedField, setFocusedField] = useState(null);
     const { login } = useContext(AuthContext);
+
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotModalVisible, setForgotModalVisible] = useState(false);
+    const [forgotLoading, setForgotLoading] = useState(false);
 
     // const handleLogin = async () => {
     //     if (!email || !password) {
@@ -38,6 +42,23 @@ export default function LoginScreen() {
     //     }
     //     setLoading(false);
     // };
+
+    const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) {
+        Alert.alert('Email Required', 'Please enter your registered email.');
+        return;
+    }
+    setForgotLoading(true);
+    try {
+        const res = await api.forgotPassword(forgotEmail.trim());
+        Alert.alert('Email Sent', 'Password reset link has been sent to your email.');
+        setForgotModalVisible(false);
+    } catch {
+        Alert.alert('Error', 'Unable to send reset email. Try again.');
+    } finally {
+        setForgotLoading(false);
+    }
+};
 
     const validateInputs = () => {
         const trimEmail = email.trim();
@@ -169,6 +190,111 @@ export default function LoginScreen() {
                             <Text style={styles.signInBtnText}>Sign In</Text>
                         )}
                     </TouchableOpacity>
+                    {/* Forgot Password - Modern Style */}
+                    <View style={styles.forgotContainer}>
+                        <TouchableOpacity
+                            style={styles.forgotBtn}
+                            onPress={() => setForgotModalVisible(true)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons 
+                                    name="key-outline" 
+                                    size={14} 
+                                    color={C.primary} 
+                                    style={styles.forgotIcon} 
+                                />
+                                <Text style={styles.forgotText}>Forgot Password?</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
+                    
+                    {/* Modern Forgot Password Modal */}
+                    <Modal
+                        visible={forgotModalVisible}
+                        transparent={true}
+                        animationType="fade"
+                        onRequestClose={() => setForgotModalVisible(false)}
+                    >
+                        <View style={styles.modalOverlay}>
+                            <View style={styles.modalCard}>
+                                {/* Close Button */}
+                                <TouchableOpacity 
+                                    style={styles.modalCloseBtn} 
+                                    onPress={() => setForgotModalVisible(false)}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Ionicons name="close-outline" size={28} color={C.textSub} />
+                                </TouchableOpacity>
+
+                                {/* Icon */}
+                                <View style={styles.modalIcon}>
+                                    <Ionicons name="mail-outline" size={32} color={C.primary} />
+                                </View>
+
+                                {/* Title & Subtitle */}
+                                <Text style={styles.modalTitle}>Forgot Password?</Text>
+                                <Text style={styles.modalSubtitle}>
+                                    Don't worry! Enter your email address{'\n'}
+                                    and we'll send you a reset link.
+                                </Text>
+
+                                {/* Email Input */}
+                                <TextInput
+                                    style={[
+                                        styles.modalInput,
+                                        forgotEmail && styles.modalInputFocused
+                                    ]}
+                                    placeholder="Enter your email address"
+                                    placeholderTextColor={C.textMuted}
+                                    value={forgotEmail}
+                                    onChangeText={setForgotEmail}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+
+                                {/* Send Button */}
+                                <TouchableOpacity
+                                    style={[styles.modalBtn, forgotLoading && styles.signInBtnDisabled]}
+                                    onPress={handleForgotPassword}
+                                    disabled={forgotLoading}
+                                    activeOpacity={0.85}
+                                >
+                                    {forgotLoading ? (
+                                        <>
+                                            <ActivityIndicator color="#fff" size="small" />
+                                            <Text style={styles.modalBtnText}>Sending...</Text>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Ionicons name="send-outline" size={18} color="#fff" />
+                                            <Text style={styles.modalBtnText}>Send Reset Link</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+
+                                {/* Divider */}
+                                <View style={styles.divider}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>OR</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
+
+                                {/* Cancel Button */}
+                                <TouchableOpacity
+                                    style={styles.modalCancelBtn}
+                                    onPress={() => {
+                                        setForgotModalVisible(false);
+                                        setForgotEmail('');
+                                    }}
+                                >
+                                    <Text style={styles.modalCancel}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </Modal>
                 </View>
 
                 {/* ── Footer ─────────────────────── */}
@@ -338,4 +464,138 @@ const styles = StyleSheet.create({
         color: C.textMuted,
         letterSpacing: 0.5,
     },
+
+    // ── Modern Modal Styles ─────────────────────────────
+modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(5px)',
+},
+modalCard: {
+    backgroundColor: C.surface,
+    borderRadius: 32,
+    padding: 28,
+    width: width * 0.85,
+    maxWidth: 400,
+    alignItems: 'center',
+    ...shadowMd,
+    borderWidth: 1,
+    borderColor: C.border,
+},
+modalCloseBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 1,
+},
+modalIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: C.primarySoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+},
+modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: C.text,
+    marginBottom: 8,
+    textAlign: 'center',
+},
+modalSubtitle: {
+    fontSize: 14,
+    color: C.textSub,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+},
+modalInput: {
+    backgroundColor: C.surfaceAlt,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 15,
+    color: C.text,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    marginBottom: 20,
+    width: '100%',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+},
+modalInputFocused: {
+    borderColor: C.primary,
+    backgroundColor: C.primarySoft,
+},
+modalBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    ...shadow,
+},
+modalBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
+    letterSpacing: 0.5,
+},
+modalCancelBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+},
+modalCancel: {
+    textAlign: 'center',
+    color: C.textMuted,
+    fontSize: 15,
+    fontWeight: '500',
+},
+divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    width: '100%',
+},
+dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: C.border,
+},
+dividerText: {
+    marginHorizontal: 12,
+    color: C.textMuted,
+    fontSize: 12,
+},
+
+// ── Forgot Password New Styles ─────────────────────────────
+forgotContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+},
+forgotBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+},
+forgotText: {
+    color: C.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    letterSpacing: 0.3,
+},
+forgotIcon: {
+    marginRight: 6,
+},
 });

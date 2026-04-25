@@ -1,21 +1,37 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jwtDecode } from 'jwt-decode';
 
 export const AuthContext = createContext();
+
+
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const isTokenExpired = (token) => {
+        try {
+            const { exp } = jwtDecode(token);
+            return Date.now() >= exp * 1000; // exp milliseconds mein compare
+        } catch {
+            return true; // decode fail = treat as expired
+        }
+    };
+
     useEffect(() => {
         const loadToken = async () => {
             try {
                 const savedToken = await AsyncStorage.getItem('token');
                 const savedUser = await AsyncStorage.getItem('user');
-                if (savedToken) {
+                if (savedToken && !isTokenExpired(savedToken)) {
                     setToken(savedToken);
                     setUser(JSON.parse(savedUser));
+                }else if (savedToken) {
+                    // Token expired — silently clear karo
+                    await AsyncStorage.multiRemove(['token', 'user']);
+                    console.log('[Auth] Token expired, auto-logout');
                 }
             } catch (e) {
                 console.log('Token load error:', e);

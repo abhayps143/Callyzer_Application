@@ -9,6 +9,7 @@ import {
 
 import { C } from '../theme';
 import { AuthContext } from '../context/AuthContext';
+import Constants from 'expo-constants';
 
 import LoginScreen from '../screens/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
@@ -184,6 +185,21 @@ function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
                         <Text style={drawerStyles.logoutIcon}>🚪</Text>
                         <Text style={drawerStyles.logoutText}>Logout</Text>
                     </TouchableOpacity>
+                    {/* ✅ NEW: App Footer with Logo + Version */}
+                    <View style={drawerStyles.drawerFooter}>
+                        <View style={drawerStyles.footerLogoRow}>
+                            <View style={drawerStyles.footerLogoBox}>
+                                <Text style={drawerStyles.footerLogoEmoji}>📞</Text>
+                            </View>
+                            <View>
+                                <Text style={drawerStyles.footerAppName}>Callyzer</Text>
+                                <Text style={drawerStyles.footerVersion}>
+                                    v{Constants.expoConfig?.version || '1.0.0'}
+                                </Text>
+                            </View>
+                        </View>
+                        <Text style={drawerStyles.footerTagline}>Call Management System</Text>
+                    </View>
                 </SafeAreaView>
             </AnimatedDrawer>
         </>
@@ -361,7 +377,43 @@ const drawerStyles = StyleSheet.create({
     menuIcon: { fontSize: 22, width: 36, color: '#cbd5e1' },
     menuLabel: { fontSize: 15, color: '#cbd5e1', fontWeight: '500' },
     menuLabelActive: { fontWeight: 'bold' },
-    logoutBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, margin: 16, backgroundColor: '#ef444420', borderRadius: 12, marginBottom: 30 },
+    logoutBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, margin: 16, backgroundColor: '#ef444420', borderRadius: 12, marginBottom: 8 },
     logoutIcon: { fontSize: 20, marginRight: 12 },
     logoutText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
+    drawerFooter: {
+        borderTopWidth: 1,
+        borderTopColor: '#ffffff15',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        marginBottom: 8,
+    },
+    footerLogoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 6,
+    },
+    footerLogoBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: '#1E40AF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    footerLogoEmoji: { fontSize: 18 },
+    footerAppName: {
+        color: '#ffffff',
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    footerVersion: {
+        color: '#64748b',
+        fontSize: 11,
+        marginTop: 1,
+    },
+    footerTagline: {
+        color: '#475569',
+        fontSize: 11,
+    }
 });

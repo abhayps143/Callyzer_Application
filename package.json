@@ -27,6 +27,7 @@
     "expo-sharing": "~55.0.18",
     "expo-status-bar": "~55.0.5",
     "expo-task-manager": "~55.0.15",
+    "jwt-decode": "^4.0.0",
     "react": "19.2.0",
     "react-native": "^0.83.6",
     "react-native-call-log": "^3.0.0",

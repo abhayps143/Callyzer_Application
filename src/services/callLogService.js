@@ -22,12 +22,25 @@ const getAuthHeaders = async () => {
 // PERMISSIONS
 // ─────────────────────────────────────────────────────
 
+export const IOS_NOT_SUPPORTED_REASON = 'Device call sync is only available on Android. iOS does not allow third-party apps to access call logs.';
+
 export const checkCallLogPermissions = async () => {
+    if (Platform.OS === 'ios') {
+        console.warn('[CallSync] iOS not supported');
+        return false;
+    }
     if (Platform.OS !== 'android') return false;
     return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_CALL_LOG);
 };
 
 export const requestCallLogPermissions = async () => {
+    if (Platform.OS === 'ios') {
+        return {
+            granted: false,
+            reason: IOS_NOT_SUPPORTED_REASON,
+            platform: 'ios',
+        };
+    }
     if (Platform.OS !== 'android') {
         return { granted: false, reason: 'Android only' };
     }

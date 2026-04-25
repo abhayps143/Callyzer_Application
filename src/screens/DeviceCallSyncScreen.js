@@ -21,6 +21,7 @@ import {
     isPhoneStateListenerActive,
 } from '../services/callLogService';
 
+import { IOS_NOT_SUPPORTED_REASON } from '../services/callLogService';
 // ─────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────
@@ -469,6 +470,16 @@ export default function DeviceCallSyncScreen() {
                         On iOS, you can still add and manage calls manually from the Call Logs screen.
                     </Text>
                 </View>
+            </View>
+        );
+    }
+
+    if (Platform.OS === 'ios') {
+        return (
+            <View style={styles.unsupportedBox}>
+                <Text style={styles.unsupportedIcon}>⚠️</Text>
+                <Text style={styles.unsupportedTitle}>Not Available on iOS</Text>
+                <Text style={styles.unsupportedText}>{IOS_NOT_SUPPORTED_REASON}</Text>
             </View>
         );
     }

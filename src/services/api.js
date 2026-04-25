@@ -38,6 +38,15 @@ export const api = {
         return res.json();
     },
 
+    forgotPassword: async (email) => {
+        const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        return res.json();
+    },
+
     // ── CALL LOGS ─────────────────────────────────────────
     // getCallLogs: async (params = {}) => {
     //     const headers = await authHeaders();
