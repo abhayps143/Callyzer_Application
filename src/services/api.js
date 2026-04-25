@@ -88,11 +88,11 @@ export const api = {
         }
 
         const query = queryParams.toString();
-        console.log('📞 API Call URL:', `${API_BASE_URL}/calls?${query}`);
+        // console.log('📞 API Call URL:', `${API_BASE_URL}/calls?${query}`);
 
         const res = await fetch(`${API_BASE_URL}/calls?${query}`, { headers });
         const data = await res.json();
-        console.log('📞 API Response:', data);
+        // console.log('📞 API Response:', data);
         return data;
     },
 
@@ -348,6 +348,12 @@ export const api = {
     getAdminStats: async () => {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE_URL}/admin/stats`, { headers });
+        return res.json();
+    },
+
+    getAdminRecentUsers: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/recent-users`, { headers });
         return res.json();
     },
 

@@ -4,8 +4,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import {
     View, Text, TouchableOpacity, StyleSheet,
     ScrollView, SafeAreaView, Dimensions, Animated,
-    Easing, Pressable, Modal
+    Easing, Pressable, Modal, ActivityIndicator,
 } from 'react-native';
+
+import { C } from '../theme';
 import { AuthContext } from '../context/AuthContext';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -120,6 +122,7 @@ const AnimatedDrawer = ({ visible, onClose, children }) => {
             </View>
         </Modal>
     );
+
 };
 
 function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
@@ -292,7 +295,14 @@ function UserStack() {
 export default function AppNavigator() {
     const { token, user, loading } = useContext(AuthContext);
 
-    if (loading) return null;
+    // if (loading) return null;
+    if (loading) {
+        return (
+            <View style={styles.splash}>
+                <ActivityIndicator size="large" color={C.primary} />
+            </View>
+        );
+    }
 
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
     const isHr = user?.role === 'hr';
@@ -322,6 +332,12 @@ export default function AppNavigator() {
 const styles = StyleSheet.create({
     backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 999 },
     drawer: { position: 'absolute', top: 0, left: 0, bottom: 0, width: DRAWER_WIDTH, backgroundColor: '#0f172a', zIndex: 1000, elevation: 10, shadowColor: '#000', shadowOffset: { width: 2, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10 },
+    splash: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: C.bg,
+    },
 });
 const headerStyles = StyleSheet.create({
     container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1e293b', paddingHorizontal: 16, paddingVertical: 12, paddingTop: 48, borderBottomWidth: 1 },

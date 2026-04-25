@@ -20,23 +20,58 @@ export default function LoginScreen() {
     const [focusedField, setFocusedField] = useState(null);
     const { login } = useContext(AuthContext);
 
+    // const handleLogin = async () => {
+    //     if (!email || !password) {
+    //         Alert.alert('Missing fields', 'Please enter your email and password.');
+    //         return;
+    //     }
+    //     setLoading(true);
+    //     try {
+    //         const data = await api.login(email, password);
+    //         if (data.token) {
+    //             await login(data.token, data.user);
+    //         } else {
+    //             Alert.alert('Login Failed', data.message || 'Invalid credentials');
+    //         }
+    //     } catch {
+    //         Alert.alert('Connection Error', 'Unable to reach server. Check your network.');
+    //     }
+    //     setLoading(false);
+    // };
+
+    const validateInputs = () => {
+        const trimEmail = email.trim();
+        const trimPwd = password.trim();
+        if (!trimEmail)
+            return 'Email address is required.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimEmail))
+            return 'Please enter a valid email address (user@company.com).';
+        if (!trimPwd)
+            return 'Password is required.';
+        if (trimPwd.length < 6)
+            return 'Password must be at least 6 characters long.';
+        return null;  // null = no error
+    };
+
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('Missing fields', 'Please enter your email and password.');
+        const validationError = validateInputs();
+        if (validationError) {
+            Alert.alert('Validation Error', validationError);
             return;
         }
         setLoading(true);
         try {
-            const data = await api.login(email, password);
+            const data = await api.login(email.trim(), password.trim());
             if (data.token) {
                 await login(data.token, data.user);
             } else {
                 Alert.alert('Login Failed', data.message || 'Invalid credentials');
             }
-        } catch {
-            Alert.alert('Connection Error', 'Unable to reach server. Check your network.');
+        } catch (error) {
+            Alert.alert('Connection Error', error.message || 'Unable to reach the server.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const inputStyle = (field) => [

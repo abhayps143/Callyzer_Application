@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C, ROLE_COLORS, shadow } from '../../theme';
 
 import { API_BASE_URL as API } from '../../config';
+import { api } from '../../services/api';
 
 const StatCard = ({ label, value, icon, color, soft, sub }) => (
     <View style={[styles.statCard, { borderTopColor: color, borderTopWidth: 3 }]}>
@@ -29,17 +30,23 @@ export default function AdminDashboardScreen({ navigation }) {
 
     const fetchAll = async () => {
         try {
-            const token = await AsyncStorage.getItem('token');
-            const h = { Authorization: `Bearer ${token}` };
-            const [s, r] = await Promise.all([
-                fetch(`${API}/admin/stats`, { headers: h }).then(x => x.json()),
-                fetch(`${API}/admin/recent-users`, { headers: h }).then(x => x.json()),
+            const [statsRes, usersRes] = await Promise.allSettled([
+                api.getAdminStats(),
+                api.getAdminRecentUsers(), // ← ab ye api.js me hoga
             ]);
-            setStats(s);
-            setRecentUsers(r.users || []);
-        } catch (e) { console.log('Admin stats error:', e); }
-        setLoading(false);
-        setRefreshing(false);
+
+            if (statsRes.status === 'fulfilled') {
+                setStats(statsRes.value);
+            }
+            if (usersRes.status === 'fulfilled') {
+                setRecentUsers(usersRes.value.users || []);
+            }
+        } catch (e) {
+            console.log('Admin stats error:', e);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
 
     useEffect(() => { fetchAll(); }, []);
