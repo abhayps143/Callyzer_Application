@@ -8,8 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C, ROLE_COLORS, shadow } from '../../theme';
 
 import { API_BASE_URL as API } from '../../config';
-const ROLES = ['agent', 'team_leader', 'manager', 'hr', 'finance', 'admin'];
-const EMPTY = { name: '', email: '', password: '', role: 'agent', phone: '', isActive: true };
+const ROLES = ['super_admin', 'business_user'];
+const FILTER_ROLES = ['All', 'super_admin', 'business_user'];
+const CREATE_ROLES = ['super_admin', 'business_user'];
+const EMPTY = { name: '', email: '', password: '', role: 'business_user', phone: '', isActive: true };
 
 export default function AdminUsersScreen() {
     const [users, setUsers] = useState([]);
@@ -98,7 +100,8 @@ export default function AdminUsersScreen() {
     };
 
     const renderUser = ({ item }) => {
-        const cfg = ROLE_COLORS[item.role] || ROLE_COLORS.agent;
+        // const cfg = ROLE_COLORS[item.role] || ROLE_COLORS.agent;
+        const cfg = ROLE_COLORS[item.role] || ROLE_COLORS.business_user;
         return (
             <View style={styles.userCard}>
                 <View style={[styles.avatar, { backgroundColor: cfg.soft }]}>
@@ -198,7 +201,7 @@ export default function AdminUsersScreen() {
                                 <Text style={styles.fieldLabel}>Role</Text>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
                                     {ROLES.map(r => {
-                                        const cfg = ROLE_COLORS[r] || ROLE_COLORS.agent;
+                                        const cfg = ROLE_COLORS[r] || ROLE_COLORS.business_user;
                                         const active = form.role === r;
                                         return (
                                             <TouchableOpacity

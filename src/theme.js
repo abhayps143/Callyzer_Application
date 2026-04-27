@@ -57,15 +57,12 @@ export const C = {
     tealSoft: '#E5F4F3',
 };
 
+
 export const ROLE_COLORS = {
-    super_admin: { color: C.purple, soft: C.purpleSoft, label: 'Super Admin' },
-    admin: { color: C.blue, soft: C.blueSoft, label: 'Admin' },
-    manager: { color: C.primary, soft: C.primarySoft, label: 'Manager' },
-    team_leader: { color: C.cyan, soft: C.cyanSoft, label: 'Team Leader' },
-    agent: { color: C.green, soft: C.greenSoft, label: 'Agent' },
-    hr: { color: C.amber, soft: C.amberSoft, label: 'HR' },
-    finance: { color: C.orange, soft: C.orangeSoft, label: 'Finance' },
+    super_admin:   { color: C.purple, soft: C.purpleSoft, label: 'Super Admin' },
+    business_user: { color: C.green,  soft: C.greenSoft,  label: 'Business User' },
 };
+
 
 export const STATUS_COLORS = {
     pending: { color: C.amber, soft: C.amberSoft, label: 'Pending' },

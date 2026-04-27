@@ -70,7 +70,8 @@ export default function AdminDashboardScreen({ navigation }) {
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Admin Overview</Text>
+                    {/* <Text style={styles.headerTitle}>Admin Overview</Text> */}
+                    <Text style={styles.headerTitle}>Super Admin Overview</Text>
                     <Text style={styles.headerDate}>
                         {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </Text>
@@ -113,10 +114,11 @@ export default function AdminDashboardScreen({ navigation }) {
             <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
             <View style={styles.quickGrid}>
                 {[
-                    { icon: '👥', label: 'Users', color: C.blue, soft: C.blueSoft, screen: 'AdminUsers' },
-                    { icon: '📋', label: 'Leaves', color: C.purple, soft: C.purpleSoft, screen: 'AdminLeaves' },
-                    { icon: '📍', label: 'Attendance', color: C.green, soft: C.greenSoft, screen: 'AdminAttendance' },
-                    { icon: '⚙️', label: 'Settings', color: C.amber, soft: C.amberSoft, screen: 'AdminSettings' },
+                    { icon: '👥', label: 'Users',       color: C.blue,   soft: C.blueSoft,   screen: 'AdminUsers' },
+                    { icon: '📞', label: 'Call Logs',   color: C.green,  soft: C.greenSoft,  screen: 'CallLogs' },
+                    { icon: '📊', label: 'Reports',     color: C.purple, soft: C.purpleSoft, screen: 'Reports' },
+                    { icon: '⚙️', label: 'Settings',   color: C.amber,  soft: C.amberSoft,  screen: 'AdminSettings' },
+
                 ].map(a => (
                     <TouchableOpacity
                         key={a.label}
@@ -136,7 +138,8 @@ export default function AdminDashboardScreen({ navigation }) {
                 {recentUsers.length === 0
                     ? <Text style={styles.emptyText}>No users yet</Text>
                     : recentUsers.map((u, i) => {
-                        const cfg = ROLE_COLORS[u.role] || ROLE_COLORS.agent;
+                        // const cfg = ROLE_COLORS[u.role] || ROLE_COLORS.agent;
+                        const cfg = ROLE_COLORS[u.role] || ROLE_COLORS.business_user;
                         return (
                             <View
                                 key={u._id}

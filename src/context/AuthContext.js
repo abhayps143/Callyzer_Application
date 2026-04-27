@@ -26,13 +26,21 @@ export const AuthProvider = ({ children }) => {
                 const savedToken = await AsyncStorage.getItem('token');
                 const savedUser = await AsyncStorage.getItem('user');
                 if (savedToken && !isTokenExpired(savedToken)) {
+                const savedUserParsed = JSON.parse(savedUser);
+                const validRoles = ['super_admin', 'business_user'];
+                if (validRoles.includes(savedUserParsed?.role)) {
                     setToken(savedToken);
-                    setUser(JSON.parse(savedUser));
-                }else if (savedToken) {
-                    // Token expired — silently clear karo
+                    setUser(savedUserParsed);
+                } else {
+                    // Invalid role — clear session
                     await AsyncStorage.multiRemove(['token', 'user']);
-                    console.log('[Auth] Token expired, auto-logout');
+                    console.log('[Auth] Invalid role, auto-logout');
                 }
+            } else if (savedToken) {
+                await AsyncStorage.multiRemove(['token', 'user']);
+                console.log('[Auth] Token expired, auto-logout');
+            }
+
             } catch (e) {
                 console.log('Token load error:', e);
             }

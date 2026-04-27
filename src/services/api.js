@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
-
-const getToken = async () => AsyncStorage.getItem('token');
-
+ 
+const getToken = async () => AsyncStorage.getItem("token");
+ 
 const authHeaders = async () => {
     const token = await getToken();
     return {
@@ -10,11 +10,9 @@ const authHeaders = async () => {
         Authorization: `Bearer ${token}`,
     };
 };
-
-
-
+ 
 export const api = {
-
+ 
     // ── AUTH ──────────────────────────────────────────────
     login: async (email, password) => {
         const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -24,20 +22,7 @@ export const api = {
         });
         return res.json();
     },
-
-    // ── DASHBOARD ─────────────────────────────────────────
-    getDashboardStats: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/dashboard/stats`, { headers });
-        return res.json();
-    },
-
-    getMyProgress: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/targets/my-progress`, { headers });
-        return res.json();
-    },
-
+ 
     forgotPassword: async (email) => {
         const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
             method: 'POST',
@@ -46,245 +31,21 @@ export const api = {
         });
         return res.json();
     },
-
-    // ── CALL LOGS ─────────────────────────────────────────
-    // getCallLogs: async (params = {}) => {
-    //     const headers = await authHeaders();
-    //     const query = new URLSearchParams({
-    //         page: params.page || 1,
-    //         limit: params.limit || 20,
-    //         sortField: params.sortField || 'calledAt',
-    //         sortDir: params.sortDir || 'desc',
-    //         ...(params.search && { search: params.search }),
-    //         ...(params.callType && params.callType !== 'All' && { callType: params.callType }),
-    //         ...(params.callStatus && params.callStatus !== 'All' && { callStatus: params.callStatus }),
-    //         ...(params.dateFrom && { dateFrom: params.dateFrom }),
-    //         ...(params.dateTo && { dateTo: params.dateTo }),
-    //     });
-    //     const res = await fetch(`${API_BASE_URL}/calls?${query}`, { headers });
-    //     return res.json();
-    // },
-    // api.js mein getCallLogs function ko REPLACE karo:
-
-    getCallLogs: async (params = {}) => {
+ 
+    // ── ADMIN STATS ───────────────────────────────────────
+    getAdminStats: async () => {
         const headers = await authHeaders();
-        const queryParams = new URLSearchParams();
-
-        // Always add these
-        queryParams.append('page', params.page || 1);
-        queryParams.append('limit', params.limit || 20);
-        queryParams.append('sortField', params.sortField || 'calledAt');
-        queryParams.append('sortDir', params.sortDir || 'desc');
-
-        // Add optional params ONLY if they have value and not 'All'
-        if (params.search && params.search.trim()) {
-            queryParams.append('search', params.search.trim());
-        }
-        if (params.callType && params.callType !== 'All') {
-            queryParams.append('callType', params.callType);
-        }
-        if (params.callStatus && params.callStatus !== 'All') {
-            queryParams.append('callStatus', params.callStatus);
-        }
-        if (params.dateFrom && params.dateFrom.trim()) {
-            queryParams.append('dateFrom', params.dateFrom);
-        }
-        if (params.dateTo && params.dateTo.trim()) {
-            queryParams.append('dateTo', params.dateTo);
-        }
-        if (params.agentId && params.agentId.trim()) {
-            queryParams.append('agentId', params.agentId);
-        }
-
-        const query = queryParams.toString();
-        // console.log('📞 API Call URL:', `${API_BASE_URL}/calls?${query}`);
-
-        const res = await fetch(`${API_BASE_URL}/calls?${query}`, { headers });
-        const data = await res.json();
-        // console.log('📞 API Response:', data);
-        return data;
-    },
-
-    // getCallStats: async () => {
-    //     const headers = await authHeaders();
-    //     const res = await fetch(`${API_BASE_URL}/calls/stats`, { headers });
-    //     return res.json();
-    // },
-
-    getCallStats: async (params = {}) => {
-        const headers = await authHeaders();
-        const queryParams = new URLSearchParams();
-        if (params.callType) queryParams.append('callType', params.callType);
-        if (params.callStatus) queryParams.append('callStatus', params.callStatus);
-        if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
-        if (params.dateTo) queryParams.append('dateTo', params.dateTo);
-        if (params.agentId) queryParams.append('agentId', params.agentId);
-        if (params.search) queryParams.append('search', params.search);
-        const query = queryParams.toString();
-        const res = await fetch(`${API_BASE_URL}/calls/stats${query ? '?' + query : ''}`, { headers });
+        const res = await fetch(`${API_BASE_URL}/admin/stats`, { headers });
         return res.json();
     },
-
-    createCallLog: async (data) => {
+ 
+    getAdminRecentUsers: async () => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(data),
-        });
+        const res = await fetch(`${API_BASE_URL}/admin/recent-users`, { headers });
         return res.json();
     },
-
-    updateCallLog: async (id, data) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/${id}`, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify(data),
-        });
-        return res.json();
-    },
-
-    deleteCallLog: async (id) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/${id}`, {
-            method: 'DELETE',
-            headers,
-        });
-        return res.json();
-    },
-
-    getPendingFollowUps: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/follow-ups`, { headers });
-        return res.json();
-    },
-
-
-    // ── ATTENDANCE ────────────────────────────────────────
-    getAttendanceToday: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/attendance/today`, { headers });
-        return res.json();
-    },
-
-    getAttendanceHistory: async (month) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/attendance/history?month=${month}`, { headers });
-        return res.json();
-    },
-    punchIn: async (location) => {
-        const headers = await authHeaders();
-        const body = location
-            ? { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy }
-            : {};
-        const res = await fetch(`${API_BASE_URL}/attendance/punch-in`, {
-            method: 'POST', headers, body: JSON.stringify(body),
-        });
-        return res.json();
-    },
-
-    punchOut: async (location) => {
-        const headers = await authHeaders();
-        const body = location
-            ? { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy }
-            : {};
-        const res = await fetch(`${API_BASE_URL}/attendance/punch-out`, {
-            method: 'POST', headers, body: JSON.stringify(body),
-        });
-        return res.json();
-    },
-
-    // punchIn: async (location) => {
-    //     const headers = await authHeaders();
-    //     const res = await fetch(`${API_BASE_URL}/attendance/punch-in`, {
-    //         method: 'POST',
-    //         headers,
-    //         body: JSON.stringify({ location }),
-    //     });
-    //     return res.json();
-    // },
-
-    // punchOut: async (location) => {
-    //     const headers = await authHeaders();
-    //     const res = await fetch(`${API_BASE_URL}/attendance/punch-out`, {
-    //         method: 'POST',
-    //         headers,
-    //         body: JSON.stringify({ location }),
-    //     });
-    //     return res.json();
-    // },
-
-    // ── LEADERBOARD ───────────────────────────────────────
-    getLeaderboard: async (period = 'weekly') => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/leaderboard?period=${period}`, { headers });
-        return res.json();
-    },
-
-    // ── REPORTS ───────────────────────────────────────────
-    getReports: async (period = 'month') => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/reports/summary?period=${period}`, { headers });
-        return res.json();
-    },
-
-    // Add this function to your api.js
-    bulkCreateCallLogs: async (calls) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ calls }),
-        });
-        return res.json();
-    },
-
-    // ── DEVICE CALL SYNC ─────────────────────────────────
-    // Add this to your api object — needed by callLogService.js
-    syncDeviceCallLogs: async (calls) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ calls, source: 'device_sync' }),
-        });
-        return res.json();
-    },
-
-    getSyncStatus: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/calls/sync-status`, { headers });
-        return res.json();
-    },
-
-    // ── LEAVES ───────────────────────────────────────────
-    getMyLeaves: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/my-leaves`, { headers });
-        return res.json();
-    },
-
-    applyLeave: async (data) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/my-leaves`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(data),
-        });
-        return res.json();
-    },
-
-    cancelLeave: async (id) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/leave/${id}/cancel`, {
-            method: 'PUT',
-            headers,
-        });
-        return res.json();
-    },
-
-    // ── ADMIN ────────────────────────────────────────────
+ 
+    // ── ADMIN USERS ───────────────────────────────────────
     getUsers: async (params = {}) => {
         const headers = await authHeaders();
         const query = new URLSearchParams({
@@ -295,186 +56,158 @@ export const api = {
         const res = await fetch(`${API_BASE_URL}/admin/users?${query}`, { headers });
         return res.json();
     },
-
+ 
     createUser: async (data) => {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE_URL}/admin/users`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(data),
+            method: 'POST', headers, body: JSON.stringify(data),
         });
         return res.json();
     },
-
+ 
     updateUser: async (id, data) => {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify(data),
+            method: 'PUT', headers, body: JSON.stringify(data),
         });
         return res.json();
     },
-
+ 
     deleteUser: async (id) => {
         const headers = await authHeaders();
         const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-            method: 'DELETE',
-            headers,
+            method: 'DELETE', headers,
         });
         return res.json();
     },
-
-    getAdminLeaves: async (params = {}) => {
+ 
+    // ── ADMIN SETTINGS ────────────────────────────────────
+    getAdminSettings: async () => {
         const headers = await authHeaders();
-        const query = new URLSearchParams({
-            ...(params.status && params.status !== 'All' && { status: params.status }),
-        });
-        const res = await fetch(`${API_BASE_URL}/hr/leaves?${query}`, { headers });
+        const res = await fetch(`${API_BASE_URL}/admin/settings`, { headers });
         return res.json();
     },
-
-    updateLeaveStatus: async (id, status, reason) => {
+ 
+    updateAdminSettings: async (data) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/admin/leaves/${id}`, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify({ status, reason }),
+        const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+            method: 'PUT', headers, body: JSON.stringify(data),
         });
         return res.json();
     },
-
-    getAdminAttendance: async (params = {}) => {
+ 
+    // ── CALL LOGS ─────────────────────────────────────────
+    getCallLogs: async (params = {}) => {
         const headers = await authHeaders();
-        const query = new URLSearchParams({
-            ...(params.date && { date: params.date }),
-            ...(params.search && { search: params.search }),
-        });
-        const res = await fetch(`${API_BASE_URL}/admin/attendance?${query}`, { headers });
+        const queryParams = new URLSearchParams();
+        queryParams.append('page', params.page || 1);
+        queryParams.append('limit', params.limit || 20);
+        queryParams.append('sortField', params.sortField || 'calledAt');
+        queryParams.append('sortDir', params.sortDir || 'desc');
+        if (params.search?.trim()) queryParams.append('search', params.search.trim());
+        if (params.callType && params.callType !== 'All') queryParams.append('callType', params.callType);
+        if (params.callStatus && params.callStatus !== 'All') queryParams.append('callStatus', params.callStatus);
+        if (params.dateFrom?.trim()) queryParams.append('dateFrom', params.dateFrom);
+        if (params.dateTo?.trim()) queryParams.append('dateTo', params.dateTo);
+        if (params.agentId?.trim()) queryParams.append('agentId', params.agentId);
+        const res = await fetch(`${API_BASE_URL}/calls?${queryParams.toString()}`, { headers });
         return res.json();
     },
-
-    getAdminStats: async () => {
+ 
+    getCallStats: async (params = {}) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/admin/stats`, { headers });
+        const queryParams = new URLSearchParams();
+        if (params.callType) queryParams.append('callType', params.callType);
+        if (params.callStatus) queryParams.append('callStatus', params.callStatus);
+        if (params.dateFrom) queryParams.append('dateFrom', params.dateFrom);
+        if (params.dateTo) queryParams.append('dateTo', params.dateTo);
+        if (params.agentId) queryParams.append('agentId', params.agentId);
+        if (params.search) queryParams.append('search', params.search);
+        const q = queryParams.toString();
+        const res = await fetch(`${API_BASE_URL}/calls/stats${q ? "?" + q : ""}`, { headers });
         return res.json();
     },
-
-    getAdminRecentUsers: async () => {
+ 
+    createCallLog: async (data) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/admin/recent-users`, { headers });
-        return res.json();
-    },
-
-    // ── HR ───────────────────────────────────────────────
-    getHrProfile: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/profile`, { headers });
-        return res.json();
-    },
-
-    updateHrProfile: async (data) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/profile`, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify(data),
-        });
-        return res.json();
-    },
-
-    getHrStats: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/stats`, { headers });
-        return res.json();
-    },
-
-    getHrRecentEmployees: async () => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/recent-employees`, { headers });
-        return res.json();
-    },
-
-    hrLeaveAction: async (hrRecordId, leaveId, action, remarks = '') => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/leaves/${hrRecordId}/${leaveId}/action`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ action, remarks }),
+        const res = await fetch(`${API_BASE_URL}/calls`, {
+            method: 'POST', headers, body: JSON.stringify(data),
         });
         return res.json();
     },
-    getHrEmployees: async (params = {}) => {
+ 
+    updateCallLog: async (id, data) => {
         const headers = await authHeaders();
-        const query = new URLSearchParams({
-            ...(params.search && { search: params.search }),
-            ...(params.role && params.role !== 'All' && { role: params.role }),
-        });
-        const res = await fetch(`${API_BASE_URL}/hr/employees?${query}`, { headers });
-        return res.json();
-    },
-
-    getHrLeaves: async (params = {}) => {
-        const headers = await authHeaders();
-        const query = new URLSearchParams({
-            ...(params.status && params.status !== 'All' && { status: params.status }),
-        });
-        const res = await fetch(`${API_BASE_URL}/hr/leaves?${query}`, { headers });
-        return res.json();
-    },
-
-    updateHrLeave: async (id, action, note) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/hr/leaves/${id}/${action}`, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify({ note }),
+        const res = await fetch(`${API_BASE_URL}/calls/${id}`, {
+            method: 'PUT', headers, body: JSON.stringify(data),
         });
         return res.json();
     },
-
-    getAllAttendance: async (monthStr) => {
+ 
+    deleteCallLog: async (id) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/attendance/all?month=${monthStr}`, { headers });
-        return res.json();
-    },
-
-    getHrAttendance: async (params = {}) => {
-        const headers = await authHeaders();
-        const query = new URLSearchParams({
-            ...(params.date && { date: params.date }),
-            ...(params.search && { search: params.search }),
+        const res = await fetch(`${API_BASE_URL}/calls/${id}`, {
+            method: 'DELETE', headers,
         });
-        const res = await fetch(`${API_BASE_URL}/hr/attendance?${query}`, { headers });
         return res.json();
     },
-
-    // ── MANAGER ──────────────────────────────────────────
-    getManagerTeam: async () => {
+ 
+    getPendingFollowUps: async () => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/manager/team`, { headers });
+        const res = await fetch(`${API_BASE_URL}/calls/follow-ups`, { headers });
         return res.json();
     },
-
-    getManagerTargets: async () => {
+ 
+    // ── DEVICE SYNC ───────────────────────────────────────
+    syncDeviceCallLogs: async (calls) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/targets`, { headers });
-        return res.json();
-    },
-
-    setTarget: async (data) => {
-        const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/targets`, {
+        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
             method: 'POST',
             headers,
-            body: JSON.stringify(data),
+            body: JSON.stringify({ calls, source: 'device_sync' }),
         });
         return res.json();
     },
-
-    getManagerStats: async () => {
+ 
+    bulkCreateCallLogs: async (calls) => {
         const headers = await authHeaders();
-        const res = await fetch(`${API_BASE_URL}/manager/stats`, { headers });
+        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ calls }),
+        });
         return res.json();
     },
+ 
+    getSyncStatus: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/calls/sync-status`, { headers });
+        return res.json();
+    },
+ 
+    // ── LEADERBOARD ───────────────────────────────────────
+    getLeaderboard: async (period = 'weekly') => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/calls/leaderboard?period=${period}`, { headers });
+        return res.json();
+    },
+ 
+    // ── REPORTS ───────────────────────────────────────────
+    getReports: async (period = 'month') => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/reports/summary?period=${period}`, { headers });
+        return res.json();
+    },
+ 
+    // ── BUSINESS USER — TEAM CALL STATS ──────────────────
+    getTeamCallStats: async (params = {}) => {
+        const headers = await authHeaders();
+        const queryParams = new URLSearchParams();
+        if (params.date) queryParams.append('date', params.date);
+        if (params.agentId) queryParams.append('agentId', params.agentId);
+        const q = queryParams.toString();
+        const res = await fetch(`${API_BASE_URL}/calls/team-stats${q ? "?" + q : ""}`, { headers });
+        return res.json();
+    },
+ 
 };
