@@ -209,5 +209,105 @@ export const api = {
         const res = await fetch(`${API_BASE_URL}/calls/team-stats${q ? "?" + q : ""}`, { headers });
         return res.json();
     },
- 
+    // ── AUTH — REGISTER (NEW) ─────────────────────────────────
+    register: async (data) => {
+        const res = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+    
+    // ── ADMIN — PENDING APPROVALS (NEW) ──────────────────────
+    getPendingApprovals: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/pending-approvals`, { headers });
+        return res.json();
+    },
+    
+    approveUser: async (id) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/users/${id}/approve`, {
+            method: 'PATCH', headers,
+        });
+        return res.json();
+    },
+    
+    rejectUser: async (id) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/users/${id}/reject`, {
+            method: 'PATCH', headers,
+        });
+        return res.json();
+    },
+    
+    toggleUserStatus: async (id) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/users/${id}/toggle-status`, {
+            method: 'PATCH', headers,
+        });
+        return res.json();
+    },
+    
+    resetUserPassword: async (id, newPassword) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/users/${id}/reset-password`, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ newPassword }),
+        });
+        return res.json();
+    },
+    
+    // ── BUSINESS USER — MY TEAM (NEW) ────────────────────────
+    getMyTeam: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/business/team`, { headers });
+        return res.json();
+    },
+    
+    createSalesperson: async (data) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/business/salespersons`, {
+            method: 'POST', headers, body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+    
+    updateSalesperson: async (id, data) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/business/salespersons/${id}`, {
+            method: 'PUT', headers, body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+    
+    toggleSalespersonStatus: async (id) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/business/salespersons/${id}/toggle-status`, {
+            method: 'PATCH', headers,
+        });
+        return res.json();
+    },
+    
+    resetSalespersonPassword: async (id, newPassword) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/business/salespersons/${id}/reset-password`, {
+            method: 'PATCH', headers,
+            body: JSON.stringify({ newPassword }),
+        });
+        return res.json();
+    },
+    
+    // ── HOURLY REPORT (NEW) ───────────────────────────────────
+    getHourlyReport: async (date, agentId) => {
+        const headers = await authHeaders();
+        const params = new URLSearchParams({ date: date || new Date().toISOString().split('T')[0] });
+        if (agentId) params.append('agentId', agentId);
+        const res = await fetch(`${API_BASE_URL}/calls/hourly?${params}`, { headers });
+        return res.json();
+    }
+    
 };
+
+

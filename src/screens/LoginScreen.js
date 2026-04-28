@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -93,6 +93,14 @@ export default function LoginScreen() {
                     return;
                 }
                 await login(data.token, data.user);
+            } else if (data.status === 'pending') {
+                // Account pending — PendingApproval screen pe bhejo
+                navigation.navigate('PendingApproval');
+            } else if (data.status === 'rejected') {
+                Alert.alert(
+                    'Account Rejected',
+                    'Your account registration was rejected. Please contact the admin.'
+                );
             } else {
                 Alert.alert('Login Failed', data.message || 'Invalid credentials');
             }
@@ -215,6 +223,16 @@ export default function LoginScreen() {
                                 />
                                 <Text style={styles.forgotText}>Forgot Password?</Text>
                             </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.registerLink}
+                            onPress={() => navigation.navigate('Register')}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.registerLinkText}>
+                                New Team Lead?{' '}
+                                <Text style={{ color: C.primary, fontWeight: '700' }}>Register here</Text>
+                            </Text>
                         </TouchableOpacity>
                     </View>
 
@@ -452,6 +470,16 @@ const styles = StyleSheet.create({
         fontSize: fs(16),
         fontWeight: '700',
         letterSpacing: 0.4,
+    },
+
+    registerLink: {
+        alignItems: 'center',
+        marginTop: rs(12),
+        paddingVertical: rs(8),
+    },
+    registerLinkText: {
+        fontSize: fs(14),
+        color: C.textMuted,
     },
 
     // ── Footer ─────────────────────────────

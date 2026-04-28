@@ -22,6 +22,14 @@ import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import AdminSettingsScreen from '../screens/admin/AdminSettingsScreen';
  
 import BusinessDashboardScreen from '../screens/BusinessDashboardScreen';
+
+import MyTeamScreen from '../screens/MyTeamScreen';
+import SalespersonDashboardScreen from '../screens/SalespersonDashboardScreen';
+
+import RegisterScreen from '../screens/RegisterScreen';
+import PendingScreen from '../screens/PendingScreen';
+import AdminApprovalsScreen from '../screens/admin/AdminApprovalsScreen';
+
  
 const Stack = createStackNavigator();
 const { width } = Dimensions.get('window');
@@ -34,27 +42,28 @@ const ROLE_COLOR = {
  
 const MENUS = {
     super_admin: [
-        { id: 'AdminDashboard', label: 'Dashboard',   icon: '🏠' },
-        { id: 'AdminUsers',     label: 'Users',       icon: '👥' },
-        { id: 'CallLogs',       label: 'Call Logs',   icon: '📞' },
-        { id: 'DeviceCallSync', label: 'Device Sync', icon: '📲' },
-        { id: 'Reports',        label: 'Reports',     icon: '📊' },
-        { id: 'Leaderboard',    label: 'Leaderboard', icon: '🏆' },
-        { id: 'AdminSettings',  label: 'Settings',    icon: '⚙️' },
+        { id: 'AdminDashboard',  label: 'Dashboard',   icon: '🏠' },
+        { id: 'AdminApprovals',  label: 'Approvals',   icon: '⏳' },  // ← ADD KARO
+        { id: 'AdminUsers',      label: 'Users',        icon: '👥' },
+        { id: 'CallLogs',        label: 'Call Logs',    icon: '📞' },
+        { id: 'Reports',         label: 'Reports',      icon: '📊' },
+        { id: 'Leaderboard',     label: 'Leaderboard',  icon: '🏆' },
+        { id: 'AdminSettings',   label: 'Settings',     icon: '⚙️' },
     ],
     business_user: [
         { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
+        { id: 'MyTeam',            label: 'My Team',     icon: '👥' },  // ← ADD KARO
         { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' },
         { id: 'DeviceCallSync',    label: 'Device Sync', icon: '📲' },
         { id: 'Reports',           label: 'Reports',     icon: '📊' },
         { id: 'Leaderboard',       label: 'Leaderboard', icon: '🏆' },
     ],
     salesperson: [
-        { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
-        { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' },
-        { id: 'DeviceCallSync',    label: 'Sync Calls',  icon: '📲' },
-        { id: 'Reports',           label: 'Reports',     icon: '📊' },
-        { id: 'Leaderboard',       label: 'Leaderboard', icon: '🏆' },
+        { id: 'SalespersonDashboard', label: 'Dashboard',   icon: '🏠' },  // ← CHANGE ID
+        { id: 'CallLogs',             label: 'Call Logs',   icon: '📞' },
+        { id: 'DeviceCallSync',       label: 'Sync Calls',  icon: '📲' },
+        { id: 'Reports',              label: 'Reports',     icon: '📊' },
+        { id: 'Leaderboard',          label: 'Leaderboard', icon: '🏆' },
     ],
 };
  
@@ -249,6 +258,9 @@ function SuperAdminStack() {
                 options={makeHeaderOptions('Leaderboard', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="AdminSettings" component={AdminSettingsScreen}
                 options={makeHeaderOptions('Settings', userRef, logoutRef, currentRouteRef)} />
+            
+            <Stack.Screen name="AdminApprovals" component={AdminApprovalsScreen}
+                options={makeHeaderOptions('Pending Approvals', userRef, logoutRef, currentRouteRef)} />
         </Stack.Navigator>
     );
 }
@@ -272,7 +284,7 @@ function SalespersonStack() {
                 }
             }}
         >
-            <Stack.Screen name="BusinessDashboard" component={BusinessDashboardScreen}
+            <Stack.Screen name="SalespersonDashboard" component={SalespersonDashboardScreen}
                 options={makeHeaderOptions('Dashboard', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="CallLogs" component={CallLogsScreen}
                 options={makeHeaderOptions('Call Logs', userRef, logoutRef, currentRouteRef)} />
@@ -315,6 +327,8 @@ function BusinessUserStack() {
                 options={makeHeaderOptions('Reports', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="Leaderboard" component={LeaderboardScreen}
                 options={makeHeaderOptions('Leaderboard', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="MyTeam" component={MyTeamScreen}
+                options={makeHeaderOptions('My Team', userRef, logoutRef, currentRouteRef)} />
         </Stack.Navigator>
     );
 }
@@ -338,7 +352,11 @@ export default function AppNavigator() {
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {!token ? (
-                    <Stack.Screen name="Login" component={LoginScreen} />
+                    <>
+                        <Stack.Screen name="Login" component={LoginScreen} />
+                        <Stack.Screen name="Register" component={RegisterScreen} />
+                        <Stack.Screen name="PendingApproval" component={PendingScreen} />
+                    </>
                 ) : isSuperAdmin ? (
                     <Stack.Screen name="SuperAdminMain" component={SuperAdminStack} />
                 ) : isSalesperson ? (
@@ -347,6 +365,7 @@ export default function AppNavigator() {
                     <Stack.Screen name="BusinessUserMain" component={BusinessUserStack} />
                 )}
             </Stack.Navigator>
+            
         </NavigationContainer>
     );
 }

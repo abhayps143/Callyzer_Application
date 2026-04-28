@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
                 const savedUser = await AsyncStorage.getItem('user');
                 if (savedToken && !isTokenExpired(savedToken)) {
                 const savedUserParsed = JSON.parse(savedUser);
-                const validRoles = ['super_admin', 'business_user'];
+                const validRoles = ['super_admin', 'business_user', 'salesperson'];
                 if (validRoles.includes(savedUserParsed?.role)) {
                     setToken(savedToken);
                     setUser(savedUserParsed);
