@@ -8,10 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { C, ROLE_COLORS, shadow } from '../../theme';
 
 import { API_BASE_URL as API } from '../../config';
-const ROLES = ['super_admin', 'business_user'];
+const ROLES = ['super_admin', 'business_user', 'salesperson'];
 const FILTER_ROLES = ['All', 'super_admin', 'business_user'];
 const CREATE_ROLES = ['super_admin', 'business_user'];
-const EMPTY = { name: '', email: '', password: '', role: 'business_user', phone: '', isActive: true };
+const EMPTY = { name: '', email: '', password: '', role: 'salesperson', phone: '', isActive: true };
 
 export default function AdminUsersScreen() {
     const [users, setUsers] = useState([]);
@@ -84,6 +84,50 @@ export default function AdminUsersScreen() {
         setSaving(false);
     };
 
+    const handleAssign = async (userId) => {
+        try {
+            const token = await getToken();
+            // Business users fetch karo
+            const res = await fetch(`${API}/admin/business-users`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const businessUsers = data.users || [];
+
+            if (businessUsers.length === 0) {
+                Alert.alert('No Business Users', 'Pehle ek Business User create karo.');
+                return;
+            }
+
+            const options = [
+                ...businessUsers.map(u => ({
+                    text: u.name,
+                    onPress: async () => {
+                        const r = await fetch(`${API}/admin/users/${userId}/assign`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ businessUserId: u._id }),
+                        });
+                        if (r.ok) { Alert.alert('Done!', `${u.name} ki team mein add ho gaya`); fetchUsers(); }
+                    }
+                })),
+                { text: 'Remove Assignment', style: 'destructive', onPress: async () => {
+                    await fetch(`${API}/admin/users/${userId}/assign`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ businessUserId: null }),
+                    });
+                    fetchUsers();
+                }},
+                { text: 'Cancel', style: 'cancel' }
+            ];
+
+                Alert.alert('Assign to Business User', 'Kis team mein add karna hai?', options);
+            } catch (e) {
+                Alert.alert('Error', 'Server error');
+            }
+        };
+
     const handleDelete = (u) => {
         Alert.alert('Delete User', `Delete "${u.name}"?`, [
             { text: 'Cancel', style: 'cancel' },
@@ -118,6 +162,12 @@ export default function AdminUsersScreen() {
                 </View>
                 <View style={styles.actions}>
                     <View style={[styles.statusDot, { backgroundColor: item.isActive ? C.green : C.red }]} />
+                    {item.role === 'salesperson' && (
+                        <TouchableOpacity onPress={() => handleAssign(item._id)} style={styles.iconBtn}>
+                            <Text style={{ fontSize: 16 }}>🔗</Text>
+                        </TouchableOpacity>
+                    )}
+
                     <TouchableOpacity onPress={() => openEdit(item)} style={styles.iconBtn}>
                         <Text style={{ fontSize: 16 }}>✏️</Text>
                     </TouchableOpacity>

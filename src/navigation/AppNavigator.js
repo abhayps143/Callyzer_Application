@@ -49,6 +49,13 @@ const MENUS = {
         { id: 'Reports',           label: 'Reports',     icon: '📊' },
         { id: 'Leaderboard',       label: 'Leaderboard', icon: '🏆' },
     ],
+    salesperson: [
+        { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
+        { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' },
+        { id: 'DeviceCallSync',    label: 'Sync Calls',  icon: '📲' },
+        { id: 'Reports',           label: 'Reports',     icon: '📊' },
+        { id: 'Leaderboard',       label: 'Leaderboard', icon: '🏆' },
+    ],
 };
  
 const AnimatedDrawer = ({ visible, onClose, children }) => {
@@ -104,7 +111,10 @@ const AnimatedDrawer = ({ visible, onClose, children }) => {
 function CustomHeader({ navigation, title, user, onLogout, currentRoute }) {
     const [menuVisible, setMenuVisible] = useState(false);
     const isSuperAdmin = user?.role === 'super_admin';
-    const menuKey = isSuperAdmin ? 'super_admin' : 'business_user';
+    // const menuKey = isSuperAdmin ? 'super_admin' : 'business_user';
+    const menuKey = user?.role === 'super_admin' ? 'super_admin'
+              : user?.role === 'salesperson'  ? 'salesperson'
+              : 'business_user';
     const menuItems = MENUS[menuKey];
     const roleColor = ROLE_COLOR[user?.role] || "#10B981";
  
@@ -242,6 +252,39 @@ function SuperAdminStack() {
         </Stack.Navigator>
     );
 }
+
+function SalespersonStack() {
+    const { user, logout } = useContext(AuthContext);
+    const [currentRoute, setCurrentRoute] = useState('BusinessDashboard');
+    const userRef = useRef(user);
+    const logoutRef = useRef(logout);
+    const currentRouteRef = useRef(currentRoute);
+    useEffect(() => { userRef.current = user; }, [user]);
+    useEffect(() => { logoutRef.current = logout; }, [logout]);
+    useEffect(() => { currentRouteRef.current = currentRoute; }, [currentRoute]);
+
+    return (
+        <Stack.Navigator
+            screenListeners={{
+                state: (e) => {
+                    const r = e.data.state.routes;
+                    if (r.length > 0) setCurrentRoute(r[r.length - 1].name);
+                }
+            }}
+        >
+            <Stack.Screen name="BusinessDashboard" component={BusinessDashboardScreen}
+                options={makeHeaderOptions('Dashboard', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="CallLogs" component={CallLogsScreen}
+                options={makeHeaderOptions('Call Logs', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="DeviceCallSync" component={DeviceCallSyncScreen}
+                options={makeHeaderOptions('Sync My Calls', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="Reports" component={ReportsScreen}
+                options={makeHeaderOptions('Reports', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="Leaderboard" component={LeaderboardScreen}
+                options={makeHeaderOptions('Leaderboard', userRef, logoutRef, currentRouteRef)} />
+        </Stack.Navigator>
+    );
+}
  
 // ── Business User Stack ──────────────────────────────────────────
 function BusinessUserStack() {
@@ -289,6 +332,7 @@ export default function AppNavigator() {
     }
  
     const isSuperAdmin = user?.role === 'super_admin';
+    const isSalesperson  = user?.role === 'salesperson';
  
     return (
         <NavigationContainer>
@@ -297,6 +341,8 @@ export default function AppNavigator() {
                     <Stack.Screen name="Login" component={LoginScreen} />
                 ) : isSuperAdmin ? (
                     <Stack.Screen name="SuperAdminMain" component={SuperAdminStack} />
+                ) : isSalesperson ? (
+                    <Stack.Screen name="SalespersonMain" component={SalespersonStack} />
                 ) : (
                     <Stack.Screen name="BusinessUserMain" component={BusinessUserStack} />
                 )}

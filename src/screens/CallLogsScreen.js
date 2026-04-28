@@ -669,7 +669,7 @@ export default function CallLogsScreen() {
         if (userRole && !isLoadingRole) fetchAgents();
     }, [userRole, isLoadingRole]);
 
-    const canAddCalls = ['agent', 'team_leader', 'admin', 'super_admin', 'employee'].includes(userRole);
+    const canAddCalls = ['agent', 'team_leader', 'admin', 'super_admin', 'employee', 'salesperson'].includes(userRole);
     const isAdmin = ['admin', 'super_admin'].includes(userRole);
     const canDelete = userRole === 'super_admin';
     const isManager = userRole === 'manager';

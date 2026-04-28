@@ -84,7 +84,7 @@ export default function LoginScreen() {
         try {
             const data = await api.login(email.trim(), password.trim());
             if (data.token) {
-                const validRoles = ['super_admin', 'business_user'];
+                const validRoles = ['super_admin', 'business_user', 'salesperson'];
                 if (!validRoles.includes(data.user?.role)) {
                     Alert.alert(
                         'Access Denied',

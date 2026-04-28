@@ -61,6 +61,8 @@ export const C = {
 export const ROLE_COLORS = {
     super_admin:   { color: C.purple, soft: C.purpleSoft, label: 'Super Admin' },
     business_user: { color: C.green,  soft: C.greenSoft,  label: 'Business User' },
+    salesperson:   { color: C.blue,   soft: C.blueSoft,   label: 'Salesperson' },
+    default:       { color: C.blue,   soft: C.blueSoft,   label: 'User' },
 };
 
 

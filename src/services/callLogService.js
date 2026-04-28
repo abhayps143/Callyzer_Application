@@ -228,28 +228,40 @@ export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
         if (!silent) console.log(`[Sync] Uploading ${newLogs.length} call(s)...`);
 
         const headers = await getAuthHeaders();
+        // ✅ NEW CODE:
         const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ calls: newLogs }),
         });
-        const data = await res.json();
 
-        if (res.ok && data.success !== false) {
+        // ── Response parse safely
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (e) {
+            return { success: false, reason: 'Invalid server response' };
+        }
+
+        if (res.ok) {
             await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+            // ✅ imported, count, ya fallback — teeno check karo
             const synced = data.imported ?? data.count ?? newLogs.length;
-            if (!silent) console.log(`[Sync] SUCCESS - ${synced} call(s) synced`);
+            const skipped = data.skipped ?? 0;
+            if (!silent) console.log(`[Sync] SUCCESS - ${synced} synced, ${skipped} duplicates skipped`);
             return {
                 success: true,
                 synced,
+                skipped,
                 total: deviceLogs.length,
-                message: `Synced ${synced} call${synced !== 1 ? 's' : ''}`,
+                message: synced > 0
+                    ? `${synced} call${synced !== 1 ? 's' : ''} synced`
+                    : `Already up to date (${skipped} duplicates skipped)`,
             };
         }
 
         if (!silent) console.warn('[Sync] Backend error:', data);
         return { success: false, reason: data.message || `HTTP ${res.status}` };
-
     } catch (err) {
         if (!silent) console.error('[Sync] Exception:', err);
         return { success: false, reason: err.message || 'Unknown error' };
