@@ -306,8 +306,27 @@ export const api = {
         if (agentId) params.append('agentId', agentId);
         const res = await fetch(`${API_BASE_URL}/calls/hourly?${params}`, { headers });
         return res.json();
-    }
+    },
     
+    getSettings: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/settings`, { headers });
+        return res.json();
+    },
+
+    updateSettings: async (data) => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+            method: 'PUT', headers, body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+
+    getBusinessDashboard: async () => {
+        const headers = await authHeaders();
+        const res = await fetch(`${API_BASE_URL}/business/dashboard`, { headers });
+        return res.json();
+    },
 };
 
 

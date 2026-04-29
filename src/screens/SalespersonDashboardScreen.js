@@ -65,6 +65,8 @@ const CallRow = ({ call }) => {
 export default function SalespersonDashboardScreen({ navigation }) {
     const { user } = useContext(AuthContext);
     const [stats, setStats] = useState(null);
+    const [myRank, setMyRank] = useState(null); 
+    const [teamSize, setTeamSize] = useState(0);
     const [recentCalls, setRecentCalls] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -75,9 +77,10 @@ export default function SalespersonDashboardScreen({ navigation }) {
 
     const fetchDashboard = async () => {
         try {
-            const [statsRes, callsRes] = await Promise.allSettled([
+            const [statsRes, callsRes, leaderRes] = await Promise.allSettled([
                 api.getCallStats({ dateFrom: todayDate(), dateTo: todayDate() }),
                 api.getCallLogs({ page: 1, limit: 5, sortField: 'calledAt', sortDir: 'desc' }),
+                api.getLeaderboard('weekly'),
             ]);
 
             if (statsRes.status === 'fulfilled') {
@@ -85,6 +88,15 @@ export default function SalespersonDashboardScreen({ navigation }) {
             }
             if (callsRes.status === 'fulfilled') {
                 setRecentCalls(callsRes.value.calls || callsRes.value.data || []);
+            }
+            if (leaderRes.status === 'fulfilled') {
+                const board = leaderRes.value?.leaderboard || [];
+                setTeamSize(board.length);
+                const myIndex = board.findIndex(
+                    (entry) => entry._id?.toString() === user?._id?.toString()
+                        || entry.agentEmail === user?.email
+                );
+                setMyRank(myIndex >= 0 ? myIndex + 1 : null);
             }
         } catch (e) {
             console.log('Salesperson dashboard error:', e);
@@ -152,6 +164,25 @@ export default function SalespersonDashboardScreen({ navigation }) {
                     <Text style={styles.connectRateLabel}>Connect Rate</Text>
                 </View>
             </View>
+
+            {/* My Rank Badge */}
+            {myRank && (
+                <View style={rankStyles.rankBanner}>
+                    <Text style={rankStyles.rankEmoji}>
+                        {myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '🏅'}
+                    </Text>
+                    <View>
+                        <Text style={rankStyles.rankTitle}>
+                            #{myRank} in Team This Week
+                        </Text>
+                        <Text style={rankStyles.rankSub}>
+                            {myRank === 1 ? 'You are the top performer! 🔥'
+                            : `${myRank - 1} ahead of you — keep going!`}
+                        </Text>
+                    </View>
+                    <Text style={rankStyles.rankTotal}>/{teamSize}</Text>
+                </View>
+            )}
 
             {/* Stats Grid */}
             <View style={styles.statsGrid}>
@@ -309,4 +340,16 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: C.border,
     },
     noCallsText: { fontSize: fs(14), color: C.textMuted, textAlign: 'center', lineHeight: fs(20) },
+});
+
+const rankStyles = StyleSheet.create({
+    rankBanner: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        backgroundColor: '#FFFBEB', borderWidth: 1.5, borderColor: '#F59E0B',
+        borderRadius: 16, marginHorizontal: 16, marginBottom: 16, padding: 14,
+    },
+    rankEmoji: { fontSize: 32 },
+    rankTitle: { fontSize: 15, fontWeight: '800', color: '#92400E' },
+    rankSub:   { fontSize: 12, color: '#B45309', marginTop: 2 },
+    rankTotal: { marginLeft: 'auto', fontSize: 18, fontWeight: '800', color: '#D97706' },
 });

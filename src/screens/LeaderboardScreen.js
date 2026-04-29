@@ -46,7 +46,7 @@ export default function LeaderboardScreen() {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.title}>Leaderboard</Text>
-                    <Text style={styles.subtitle}>Top performing agents</Text>
+                    <Text style={styles.subtitle}>Top performing salespersons</Text>
                 </View>
                 <View style={styles.headerIcon}>
                     <Text style={styles.headerIconText}>🏆</Text>

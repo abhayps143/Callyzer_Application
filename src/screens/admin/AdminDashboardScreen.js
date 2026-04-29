@@ -25,14 +25,16 @@ export default function AdminDashboardScreen({ navigation }) {
     const { logout } = useContext(AuthContext);
     const [stats, setStats] = useState(null);
     const [recentUsers, setRecentUsers] = useState([]);
+    const [pendingCount, setPendingCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchAll = async () => {
         try {
-            const [statsRes, usersRes] = await Promise.allSettled([
+            const [statsRes, usersRes, pendingRes] = await Promise.allSettled([
                 api.getAdminStats(),
                 api.getAdminRecentUsers(), // ← ab ye api.js me hoga
+                api.getPendingApprovals(),
             ]);
 
             if (statsRes.status === 'fulfilled') {
@@ -40,6 +42,9 @@ export default function AdminDashboardScreen({ navigation }) {
             }
             if (usersRes.status === 'fulfilled') {
                 setRecentUsers(usersRes.value.users || []);
+            }
+            if (pendingRes.status === 'fulfilled') {    // ← ADD KARO
+                setPendingCount(pendingRes.value.count || 0);
             }
         } catch (e) {
             console.log('Admin stats error:', e);
@@ -90,6 +95,27 @@ export default function AdminDashboardScreen({ navigation }) {
                 <StatCard label="Active Today" value={stats?.recentlyActive} icon="🟢" color={C.amber} soft={C.amberSoft} sub="Last 24 hrs" />
             </View>
 
+            {pendingCount > 0 && (
+                <TouchableOpacity
+                    style={styles.pendingBanner}
+                    onPress={() => navigation.navigate('AdminApprovals')}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.pendingLeft}>
+                        <View style={styles.pendingDot}>
+                            <Text style={{ fontSize: 20 }}>⏳</Text>
+                        </View>
+                        <View>
+                            <Text style={styles.pendingTitle}>
+                                {pendingCount} Pending Approval{pendingCount !== 1 ? 's' : ''}
+                            </Text>
+                            <Text style={styles.pendingSub}>Tap to review and approve accounts</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.pendingArrow}>›</Text>
+                </TouchableOpacity>
+            )}
+
             {/* Role Breakdown */}
             <Text style={styles.sectionLabel}>USERS BY ROLE</Text>
             <View style={styles.card}>
@@ -115,6 +141,7 @@ export default function AdminDashboardScreen({ navigation }) {
             <View style={styles.quickGrid}>
                 {[
                     { icon: '👥', label: 'Users',       color: C.blue,   soft: C.blueSoft,   screen: 'AdminUsers' },
+                    { icon: '⏳', label: 'Approvals', color: C.amber,  soft: C.amberSoft,  screen: 'AdminApprovals' },  
                     { icon: '📞', label: 'Call Logs',   color: C.green,  soft: C.greenSoft,  screen: 'CallLogs' },
                     { icon: '📊', label: 'Reports',     color: C.purple, soft: C.purpleSoft, screen: 'Reports' },
                     { icon: '⚙️', label: 'Settings',   color: C.amber,  soft: C.amberSoft,  screen: 'AdminSettings' },
@@ -139,14 +166,14 @@ export default function AdminDashboardScreen({ navigation }) {
                     ? <Text style={styles.emptyText}>No users yet</Text>
                     : recentUsers.map((u, i) => {
                         // const cfg = ROLE_COLORS[u.role] || ROLE_COLORS.agent;
-                        const cfg = ROLE_COLORS[u.role] || ROLE_COLORS.business_user;
+                        const cfg = ROLE_COLORS[u.role]|| ROLE_COLORS.default || ROLE_COLORS.business_user;
                         return (
                             <View
                                 key={u._id}
                                 style={[styles.userRow, i < recentUsers.length - 1 && styles.rowDivider]}
                             >
-                                <View style={[styles.avatar, { backgroundColor: cfg.soft }]}>
-                                    <Text style={[styles.avatarText, { color: cfg.color }]}>
+                                <View style={[styles.avatar, { backgroundColor: cfg.soft || C.blueSoft  }]}>
+                                    <Text style={[styles.avatarText, { color: cfg.color || C.blue  }]}>
                                         {u.name.charAt(0).toUpperCase()}
                                     </Text>
                                 </View>
@@ -265,4 +292,20 @@ const styles = StyleSheet.create({
     tileLabel: { fontSize: 12, fontWeight: '600', marginTop: 4 },
 
     emptyText: { color: C.textMuted, textAlign: 'center', padding: 20 },
+    pendingBanner: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        backgroundColor: '#FFF7ED',
+        borderWidth: 1.5, borderColor: '#F59E0B',
+        borderRadius: 16, marginHorizontal: 16,
+        marginBottom: 16, padding: 16,
+    },
+    pendingLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+    pendingDot: {
+        width: 44, height: 44, borderRadius: 12,
+        backgroundColor: '#FEF3C7', justifyContent: 'center', alignItems: 'center',
+    },
+    pendingTitle: { fontSize: 15, fontWeight: '800', color: '#92400E' },
+    pendingSub:   { fontSize: 12, color: '#B45309', marginTop: 2 },
+    pendingArrow: { fontSize: 28, color: '#F59E0B', fontWeight: '300' },
+
 });

@@ -187,16 +187,39 @@ export default function ReportsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
     const [exporting, setExporting] = useState(false);
+    const [hourlyData, setHourlyData] = useState([]);
+    const [peakHour, setPeakHour] = useState(null);
+    const [agentReports, setAgentReports] = useState([]);
 
     const fetchData = useCallback(async () => {
         setError('');
         try {
             const { dateFrom, dateTo } = getDateRange(period);
-            const logsRes = await api.getCallLogs({ dateFrom, dateTo, limit: 500, sortField: 'calledAt', sortDir: 'asc' });
-            let logsData = [];
-            if (logsRes?.logs) logsData = logsRes.logs;
-            else if (Array.isArray(logsRes)) logsData = logsRes;
-            setLogs(logsData);
+
+            const [logsRes, hourlyRes, teamRes] = await Promise.allSettled([
+                api.getCallLogs({ dateFrom, dateTo, limit: 500, sortField: 'calledAt', sortDir: 'asc' }),
+                api.getHourlyReport(new Date().toISOString().split('T')[0]),   // ← ADD: aaj ka hourly
+                api.getTeamCallStats(),
+            ]);
+
+            // Logs
+            if (logsRes.status === 'fulfilled') {
+                const r = logsRes.value;
+                setLogs(r?.logs || (Array.isArray(r) ? r : []));
+            }
+
+            // Hourly
+            if (hourlyRes.status === 'fulfilled') {
+                const h = hourlyRes.value;
+                setHourlyData(h?.workHours || []);
+                setPeakHour(h?.peakHour || null);
+            }
+
+            // Team/Agent report
+            if (teamRes.status === 'fulfilled') {
+                const t = teamRes.value;
+                setAgentReports(t?.agents || []);
+            }
         } catch (e) {
             setError('Server se connect nahi ho pa raha');
         } finally {
@@ -489,6 +512,158 @@ export default function ReportsScreen() {
                             </View>
                         </View>
                     )}
+
+                    {/* ── Hourly Breakdown ───────────────── */}
+                    {hourlyData.length > 0 && (
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <View style={styles.sectionBar} />
+                                <Text style={styles.sectionTitle}>Today's Hourly Breakdown</Text>
+                            </View>
+
+                            {/* Peak Hour Banner */}
+                            {peakHour && peakHour.total > 0 && (
+                                <View style={hourlyStyles.peakBanner}>
+                                    <Text style={hourlyStyles.peakIcon}>🔥</Text>
+                                    <View>
+                                        <Text style={hourlyStyles.peakTitle}>
+                                            Peak Hour: {peakHour.label}
+                                        </Text>
+                                        <Text style={hourlyStyles.peakSub}>
+                                            {peakHour.total} calls · {peakHour.connected} connected
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* Hourly Bar Chart */}
+                            <View style={styles.card}>
+                                <View style={styles.legendRow}>
+                                    {[['Connected', '#22c55e'], ['Missed', '#ef4444'], ['Rejected', '#f59e0b']].map(([l, c]) => (
+                                        <View key={l} style={styles.legendItem}>
+                                            <View style={[styles.legendDot, { backgroundColor: c }]} />
+                                            <Text style={styles.legendText}>{l}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    <View style={styles.barChart}>
+                                        {hourlyData.map((h, i) => {
+                                            const maxH = Math.max(...hourlyData.map(x => x.total), 1);
+                                            const BAR = 90;
+                                            const connH  = Math.round((h.connected / maxH) * BAR);
+                                            const missH  = Math.round((h.missed    / maxH) * BAR);
+                                            const rejH   = Math.round((h.rejected  / maxH) * BAR);
+                                            const isPeak = peakHour && peakHour.hour === h.hour && h.total > 0;
+                                            return (
+                                                <View key={i} style={styles.barCol}>
+                                                    <Text style={[styles.barTopVal, isPeak && { color: '#f59e0b', fontWeight: '800' }]}>
+                                                        {h.total || ''}
+                                                    </Text>
+                                                    <View style={{ height: BAR, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
+                                                        {connH > 0 && <View style={{ width: 8, height: connH, backgroundColor: '#22c55e', borderRadius: 3 }} />}
+                                                        {missH > 0 && <View style={{ width: 8, height: missH, backgroundColor: '#ef4444', borderRadius: 3 }} />}
+                                                        {rejH  > 0 && <View style={{ width: 8, height: rejH,  backgroundColor: '#f59e0b', borderRadius: 3 }} />}
+                                                        {h.total === 0 && <View style={{ width: 8, height: 3, backgroundColor: '#e2e8f0', borderRadius: 3 }} />}
+                                                    </View>
+                                                    <Text style={[styles.barXLabel, isPeak && { color: '#f59e0b' }]}>
+                                                        {h.label}
+                                                    </Text>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                </ScrollView>
+                            </View>
+
+                            {/* Hourly Table */}
+                            <View style={[styles.card, { marginTop: 10, paddingHorizontal: 0, overflow: 'hidden' }]}>
+                                {/* Header row */}
+                                <View style={hourlyStyles.tableHeader}>
+                                    <Text style={[hourlyStyles.th, { flex: 1.2 }]}>Hour</Text>
+                                    <Text style={hourlyStyles.th}>Total</Text>
+                                    <Text style={hourlyStyles.th}>✅</Text>
+                                    <Text style={hourlyStyles.th}>❌</Text>
+                                    <Text style={hourlyStyles.th}>Rate</Text>
+                                </View>
+                                {hourlyData.filter(h => h.total > 0).map((h, i) => {
+                                    const rate = h.total > 0 ? Math.round((h.connected / h.total) * 100) : 0;
+                                    const isPeak = peakHour && peakHour.hour === h.hour;
+                                    return (
+                                        <View
+                                            key={i}
+                                            style={[
+                                                hourlyStyles.tableRow,
+                                                i % 2 === 0 && { backgroundColor: '#f8fafc' },
+                                                isPeak && { backgroundColor: '#fffbeb' },
+                                            ]}
+                                        >
+                                            <View style={[hourlyStyles.td, { flex: 1.2, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                                                {isPeak && <Text style={{ fontSize: 12 }}>🔥</Text>}
+                                                <Text style={[hourlyStyles.tdText, { fontWeight: isPeak ? '800' : '600' }]}>
+                                                    {h.label}
+                                                </Text>
+                                            </View>
+                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { fontWeight: '700' }]}>{h.total}</Text>
+                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: '#22c55e' }]}>{h.connected}</Text>
+                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: '#ef4444' }]}>{h.missed}</Text>
+                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: rate >= 50 ? '#22c55e' : '#ef4444', fontWeight: '700' }]}>
+                                                {rate}%
+                                            </Text>
+                                        </View>
+                                    );
+                                })}
+                                {hourlyData.every(h => h.total === 0) && (
+                                    <Text style={hourlyStyles.noData}>No calls recorded today</Text>
+                                )}
+                            </View>
+                        </View>
+                    )}
+                    {/* ── Per Salesperson Report ─────────────── */}
+                    {agentReports.length > 0 && (
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <View style={styles.sectionBar} />
+                                <Text style={styles.sectionTitle}>Today's Team Performance</Text>
+                            </View>
+                            <View style={[styles.card, { paddingHorizontal: 0, overflow: 'hidden' }]}>
+                                {/* Table Header */}
+                                <View style={agentStyles.tableHead}>
+                                    <Text style={[agentStyles.th, { flex: 2 }]}>Salesperson</Text>
+                                    <Text style={agentStyles.th}>Calls</Text>
+                                    <Text style={agentStyles.th}>✅</Text>
+                                    <Text style={agentStyles.th}>Rate</Text>
+                                </View>
+                                {agentReports.map((agent, i) => {
+                                    const rate = agent.totalCalls > 0
+                                        ? Math.round((agent.connectedCalls / agent.totalCalls) * 100) : 0;
+                                    return (
+                                        <View key={agent._id || i}
+                                            style={[agentStyles.row, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}>
+                                            <View style={[agentStyles.td, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                                                <View style={agentStyles.avatar}>
+                                                    <Text style={agentStyles.avatarText}>
+                                                        {(agent.name || 'S').charAt(0).toUpperCase()}
+                                                    </Text>
+                                                </View>
+                                                <Text style={agentStyles.agentName} numberOfLines={1}>{agent.name}</Text>
+                                            </View>
+                                            <Text style={[agentStyles.tdText, agentStyles.td, { fontWeight: '700' }]}>
+                                                {agent.totalCalls}
+                                            </Text>
+                                            <Text style={[agentStyles.tdText, agentStyles.td, { color: '#22c55e' }]}>
+                                                {agent.connectedCalls}
+                                            </Text>
+                                            <Text style={[agentStyles.tdText, agentStyles.td,
+                                                { color: rate >= 50 ? '#22c55e' : '#ef4444', fontWeight: '700' }]}>
+                                                {rate}%
+                                            </Text>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    )}
                 </>
             )}
 
@@ -580,4 +755,57 @@ const styles = StyleSheet.create({
     barCol: { alignItems: 'center', minWidth: 36 },
     barTopVal: { color: '#64748b', fontSize: 10, fontWeight: '600', marginBottom: 4, minHeight: 14 },
     barXLabel: { color: '#94a3b8', fontSize: 10, marginTop: 6, fontWeight: '500' },
+});
+
+const hourlyStyles = StyleSheet.create({
+    peakBanner: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        backgroundColor: '#fffbeb', borderWidth: 1.5, borderColor: '#f59e0b',
+        borderRadius: 14, marginHorizontal: 16, marginBottom: 10, padding: 14,
+    },
+    peakIcon:  { fontSize: 28 },
+    peakTitle: { fontSize: 15, fontWeight: '800', color: '#92400E' },
+    peakSub:   { fontSize: 12, color: '#B45309', marginTop: 2 },
+
+    tableHeader: {
+        flexDirection: 'row', backgroundColor: '#0f172a',
+        paddingHorizontal: 16, paddingVertical: 10,
+    },
+    th: {
+        flex: 1, color: '#fff', fontSize: 12,
+        fontWeight: '700', textAlign: 'center',
+    },
+    tableRow: {
+        flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10,
+        borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    },
+    td:     { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    tdText: { fontSize: 13, color: '#1e293b', textAlign: 'center' },
+    noData: {
+        textAlign: 'center', color: '#94a3b8',
+        fontSize: 13, padding: 20,
+    },
+});
+
+const agentStyles = StyleSheet.create({
+    tableHead: {
+        flexDirection: 'row', backgroundColor: '#0f172a',
+        paddingHorizontal: 14, paddingVertical: 10,
+    },
+    th: {
+        flex: 1, color: '#fff', fontSize: 12,
+        fontWeight: '700', textAlign: 'center',
+    },
+    row: {
+        flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 11,
+        borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+    },
+    td:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    tdText:   { fontSize: 13, color: '#1e293b', textAlign: 'center' },
+    avatar: {
+        width: 28, height: 28, borderRadius: 14,
+        backgroundColor: '#EBF0FF', justifyContent: 'center', alignItems: 'center',
+    },
+    avatarText:  { fontSize: 13, fontWeight: '700', color: '#4A68F0' },
+    agentName:   { fontSize: 13, fontWeight: '600', color: '#1e293b', flex: 1 },
 });
