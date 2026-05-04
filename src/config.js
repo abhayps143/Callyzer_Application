@@ -4,14 +4,14 @@
 // DEV mode (when running in Expo Go / development)
 
 //Vinayak
-const DEV_API_URL = 'http://192.168.1.65:5000/api';
+// const DEV_API_URL = 'http://192.168.1.65:5000/api';
 
 //Abhay
-// const DEV_API_URL = 'http://192.168.1.51:5000/api';
+const DEV_API_URL = 'http://192.168.1.51:5000/api';
 
 
 // Production mode (when app is built)
-const PROD_API_URL = 'https://your-production-server.com/api';
+// const PROD_API_URL = 'https://your-production-server.com/api';
 
 // Auto-detect based on __DEV__ flag
 export const API_BASE_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;

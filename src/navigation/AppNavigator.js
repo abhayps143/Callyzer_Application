@@ -29,6 +29,9 @@ import SalespersonDashboardScreen from '../screens/SalespersonDashboardScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import PendingScreen from '../screens/PendingScreen';
 import AdminApprovalsScreen from '../screens/admin/AdminApprovalsScreen';
+import LiveFeedScreen from '../screens/LiveFeedScreen';
+import CallHistoryScreen from '../screens/CallHistoryScreen';
+
 
  
 const Stack = createStackNavigator();
@@ -43,7 +46,7 @@ const ROLE_COLOR = {
 const MENUS = {
     super_admin: [
         { id: 'AdminDashboard',  label: 'Dashboard',   icon: '🏠' },
-        { id: 'AdminApprovals',  label: 'Approvals',   icon: '⏳' },  // ← ADD KARO
+        { id: 'AdminApprovals',  label: 'Approvals',   icon: '⏳' },  
         { id: 'AdminUsers',      label: 'Users',        icon: '👥' },
         { id: 'CallLogs',        label: 'Call Logs',    icon: '📞' },
         { id: 'Reports',         label: 'Reports',      icon: '📊' },
@@ -52,15 +55,18 @@ const MENUS = {
     ],
     business_user: [
         { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
-        { id: 'MyTeam',            label: 'My Team',     icon: '👥' },  // ← ADD KARO
+        { id: 'LiveFeed',          label: 'Live Feed', icon: '🔴' },
+        { id: 'MyTeam',            label: 'My Team',     icon: '👥' },  
         { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' },
+        
         { id: 'DeviceCallSync',    label: 'Device Sync', icon: '📲' },
         { id: 'Reports',           label: 'Reports',     icon: '📊' },
         { id: 'Leaderboard',       label: 'Leaderboard', icon: '🏆' },
     ],
     salesperson: [
-        { id: 'SalespersonDashboard', label: 'Dashboard',   icon: '🏠' },  // ← CHANGE ID
+        { id: 'SalespersonDashboard', label: 'Dashboard',   icon: '🏠' },  
         { id: 'CallLogs',             label: 'Call Logs',   icon: '📞' },
+        { id: 'CallHistory',          label: 'My History', icon: '🕑' },
         { id: 'DeviceCallSync',       label: 'Sync Calls',  icon: '📲' },
         { id: 'Reports',              label: 'Reports',     icon: '📊' },
         { id: 'Leaderboard',          label: 'Leaderboard', icon: '🏆' },
@@ -288,6 +294,8 @@ function SalespersonStack() {
                 options={makeHeaderOptions('Dashboard', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="CallLogs" component={CallLogsScreen}
                 options={makeHeaderOptions('Call Logs', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="CallHistory" component={CallHistoryScreen}
+                options={makeHeaderOptions('My History', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="DeviceCallSync" component={DeviceCallSyncScreen}
                 options={makeHeaderOptions('Sync My Calls', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="Reports" component={ReportsScreen}
@@ -323,12 +331,16 @@ function BusinessUserStack() {
                 options={makeHeaderOptions('Call Logs', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="DeviceCallSync" component={DeviceCallSyncScreen}
                 options={makeHeaderOptions('Device Call Sync', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="CallHistory" component={CallHistoryScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Reports" component={ReportsScreen}
                 options={makeHeaderOptions('Reports', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="Leaderboard" component={LeaderboardScreen}
                 options={makeHeaderOptions('Leaderboard', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="MyTeam" component={MyTeamScreen}
                 options={makeHeaderOptions('My Team', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="LiveFeed" component={LiveFeedScreen}
+                options={makeHeaderOptions('Live Feed', userRef, logoutRef, currentRouteRef)} />
+
         </Stack.Navigator>
     );
 }

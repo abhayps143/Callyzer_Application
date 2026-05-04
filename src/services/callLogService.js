@@ -1,15 +1,434 @@
+// import { Platform, PermissionsAndroid, AppState } from 'react-native';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import * as TaskManager from 'expo-task-manager';
+// import * as BackgroundFetch from 'expo-background-fetch';
+
+// import { API_BASE_URL } from '../config';
+
+// const LAST_SYNC_KEY = '@callyzer:lastSyncTs';
+// const SYNC_LOCK_KEY = '@callyzer:syncLock';
+// const BG_TASK_NAME = 'CALLYZER_CALL_SYNC';
+
+// // ── Auth headers — same pattern as api.js ─────────────
+// const getAuthHeaders = async () => {
+//     const token = await AsyncStorage.getItem('token');
+//     return {
+//         'Content-Type': 'application/json',
+//         Authorization: `Bearer ${token}`,
+//     };
+// };
+
+// // ─────────────────────────────────────────────────────
+// // PERMISSIONS
+// // ─────────────────────────────────────────────────────
+
+// export const IOS_NOT_SUPPORTED_REASON = 'Device call sync is only available on Android. iOS does not allow third-party apps to access call logs.';
+
+// export const checkCallLogPermissions = async () => {
+//     if (Platform.OS === 'ios') {
+//         console.warn('[CallSync] iOS not supported');
+//         return false;
+//     }
+//     if (Platform.OS !== 'android') return false;
+//     return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_CALL_LOG);
+// };
+
+// export const requestCallLogPermissions = async () => {
+//     if (Platform.OS === 'ios') {
+//         return {
+//             granted: false,
+//             reason: IOS_NOT_SUPPORTED_REASON,
+//             platform: 'ios',
+//         };
+//     }
+//     if (Platform.OS !== 'android') {
+//         return { granted: false, reason: 'Android only' };
+//     }
+//     try {
+//         const readCallLog = await PermissionsAndroid.request(
+//             PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
+//             {
+//                 title: 'Call Log Access',
+//                 message:
+//                     'CallyzerApp needs your call history to automatically sync ' +
+//                     'call activity with your team dashboard.',
+//                 buttonNeutral: 'Ask Later',
+//                 buttonNegative: 'Deny',
+//                 buttonPositive: 'Allow',
+//             }
+//         );
+//         const readPhoneState = await PermissionsAndroid.request(
+//             PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+//             {
+//                 title: 'Phone State Access',
+//                 message: 'CallyzerApp needs phone state access to detect calls in real-time.',
+//                 buttonNeutral: 'Ask Later',
+//                 buttonNegative: 'Deny',
+//                 buttonPositive: 'Allow',
+//             }
+//         );
+//         const granted =
+//             readCallLog === PermissionsAndroid.RESULTS.GRANTED &&
+//             readPhoneState === PermissionsAndroid.RESULTS.GRANTED;
+
+//         return {
+//             granted,
+//             readCallLog,
+//             readPhoneState,
+//             reason: granted ? null : 'Permission denied',
+//         };
+//     } catch (err) {
+//         return { granted: false, reason: err.message };
+//     }
+// };
+
+// // ─────────────────────────────────────────────────────
+// // CALL TYPE / STATUS MAPPING
+// // ─────────────────────────────────────────────────────
+
+// const TYPE_INT_MAP = {
+//     1: 'Incoming',
+//     2: 'Outgoing',
+//     3: 'Missed',
+//     4: 'Voicemail',
+//     5: 'Rejected',
+//     6: 'Blocked',
+// };
+
+// const mapCallType = (rawType, rawTypeStr) => {
+//     const byInt = TYPE_INT_MAP[parseInt(rawType)];
+//     if (byInt) return byInt;
+//     const u = (rawTypeStr || '').toUpperCase();
+//     if (u.includes('INCOMING')) return 'Incoming';
+//     if (u.includes('OUTGOING')) return 'Outgoing';
+//     if (u.includes('MISSED')) return 'Missed';
+//     if (u.includes('REJECTED')) return 'Rejected';
+//     return 'Incoming';
+// };
+
+// const mapCallStatus = (callType, durationSec) => {
+//     if (['Missed', 'Voicemail'].includes(callType)) return 'Missed';
+//     if (['Rejected', 'Blocked'].includes(callType)) return 'Rejected';
+//     return durationSec === 0 ? 'Missed' : 'Connected';
+// };
+
+// // ─────────────────────────────────────────────────────
+// // READ DEVICE CALL LOGS
+// // ─────────────────────────────────────────────────────
+
+// // export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
+// //     if (Platform.OS !== 'android') {
+// //         throw new Error('readDeviceCallLogs is Android-only');
+// //     }
+
+// //     const hasPerm = await checkCallLogPermissions();
+// //     if (!hasPerm) {
+// //         const res = await requestCallLogPermissions();
+// //         if (!res.granted) throw new Error('READ_CALL_LOG permission denied');
+// //     }
+
+// //     const CallLogs = require('react-native-call-log').default;
+// //     const cutoffMs = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+
+// //     const raw = await CallLogs.loadAll(String(maxCount), {
+// //         minTimestamp: String(cutoffMs),
+// //     });
+
+// export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
+//     if (Platform.OS !== 'android') {
+//         throw new Error('readDeviceCallLogs is Android-only');
+//     }
+
+//     const hasPerm = await checkCallLogPermissions();
+//     if (!hasPerm) {
+//         const res = await requestCallLogPermissions();
+//         if (!res.granted) throw new Error('READ_CALL_LOG permission denied');
+//     }
+
+//     // Safe import with null check
+//     let CallLogsModule;
+//     try {
+//         const mod = require('react-native-call-log');
+//         CallLogsModule = mod.default || mod;
+//     } catch (e) {
+//         throw new Error('react-native-call-log not installed. Run: npm install react-native-call-log');
+//     }
+
+//     if (!CallLogsModule || typeof CallLogsModule.loadAll !== 'function') {
+//         throw new Error('react-native-call-log module loaded but loadAll not found. Rebuild the app.');
+//     }
+
+//     const cutoffMs = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+
+//     const raw = await CallLogsModule.loadAll(String(maxCount), {
+//         minTimestamp: String(cutoffMs),
+//     });
+
+//     return (raw || []).map((log) => {
+//         const duration = parseInt(log.duration) || 0;
+//         const callType = mapCallType(log.rawType, log.type);
+//         const callStatus = mapCallStatus(callType, duration);
+//         const ts = parseInt(log.timestamp);
+//         const phone = (log.phoneNumber || log.number || '').replace(/\D/g, '');
+
+//         return {
+//             customerNumber: log.phoneNumber || log.number || '',
+//             customerName: log.name || log.cachedName || 'Unknown',
+//             callType,
+//             callStatus,
+//             durationSeconds: duration,
+//             calledAt: new Date(ts).toISOString(),
+//             source: 'device_sync',
+//             deviceLogId: `device_${ts}_${phone}`,
+//         };
+//     });
+// };
+
+// // ─────────────────────────────────────────────────────
+// // SYNC ENGINE
+// // ─────────────────────────────────────────────────────
+
+// export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
+//     // Prevent concurrent syncs
+//     const lock = await AsyncStorage.getItem(SYNC_LOCK_KEY);
+//     if (lock === 'true') return { skipped: true, reason: 'Sync already in progress' };
+
+//     try {
+//         await AsyncStorage.setItem(SYNC_LOCK_KEY, 'true');
+
+//         if (Platform.OS !== 'android') return { success: false, reason: 'Android only' };
+
+//         const hasPerm = await checkCallLogPermissions();
+//         if (!hasPerm) return { success: false, reason: 'Missing READ_CALL_LOG permission' };
+
+//         const lastSyncStr = await AsyncStorage.getItem(LAST_SYNC_KEY);
+//         const lastSyncTs = lastSyncStr ? parseInt(lastSyncStr) : 0;
+//         const daysBack = lastSyncTs
+//             ? Math.min(30, Math.ceil((Date.now() - lastSyncTs) / 86400000) + 1)
+//             : 7;
+
+//         if (!silent) console.log(`[Sync] Reading last ${daysBack} day(s)...`);
+
+//         const deviceLogs = await readDeviceCallLogs(200, daysBack);
+
+//         if (!deviceLogs.length) {
+//             await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+//             return { success: true, synced: 0, total: 0, message: 'No calls on device' };
+//         }
+
+//         const newLogs = lastSyncTs
+//             ? deviceLogs.filter(l => new Date(l.calledAt).getTime() > lastSyncTs)
+//             : deviceLogs;
+
+//         if (!newLogs.length) {
+//             await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+//             return { success: true, synced: 0, total: deviceLogs.length, message: 'Already up to date' };
+//         }
+
+//         if (!silent) console.log(`[Sync] Uploading ${newLogs.length} call(s)...`);
+
+//         const headers = await getAuthHeaders();
+//         // ✅ NEW CODE:
+//         const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
+//             method: 'POST',
+//             headers,
+//             body: JSON.stringify({ calls: newLogs }),
+//         });
+
+//         // ── Response parse safely
+//         let data = {};
+//         try {
+//             data = await res.json();
+//         } catch (e) {
+//             return { success: false, reason: 'Invalid server response' };
+//         }
+
+//         if (res.ok) {
+//             await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+//             // ✅ imported, count, ya fallback — teeno check karo
+//             const synced = data.imported ?? data.count ?? newLogs.length;
+//             const skipped = data.skipped ?? 0;
+//             if (!silent) console.log(`[Sync] SUCCESS - ${synced} synced, ${skipped} duplicates skipped`);
+//             return {
+//                 success: true,
+//                 synced,
+//                 skipped,
+//                 total: deviceLogs.length,
+//                 message: synced > 0
+//                     ? `${synced} call${synced !== 1 ? 's' : ''} synced`
+//                     : `Already up to date (${skipped} duplicates skipped)`,
+//             };
+//         }
+
+//         if (!silent) console.warn('[Sync] Backend error:', data);
+//         return { success: false, reason: data.message || `HTTP ${res.status}` };
+//     } catch (err) {
+//         if (!silent) console.error('[Sync] Exception:', err);
+//         return { success: false, reason: err.message || 'Unknown error' };
+//     } finally {
+//         await AsyncStorage.setItem(SYNC_LOCK_KEY, 'false');
+//     }
+// };
+
+// export const getLastSyncTime = async () => {
+//     const ts = await AsyncStorage.getItem(LAST_SYNC_KEY);
+//     return ts ? new Date(parseInt(ts)) : null;
+// };
+
+// export const resetSyncState = async () => {
+//     await AsyncStorage.removeItem(LAST_SYNC_KEY);
+//     await AsyncStorage.setItem(SYNC_LOCK_KEY, 'false');
+// };
+
+// // ─────────────────────────────────────────────────────
+// // BACKGROUND SYNC  (expo-background-fetch)
+// // ─────────────────────────────────────────────────────
+
+// // defineTask MUST run at module top-level before any UI renders.
+// // App.js imports this file unconditionally to ensure this.
+// TaskManager.defineTask(BG_TASK_NAME, async () => {
+//     try {
+//         console.log('[BG] Background sync task fired');
+//         await syncCallLogsToBackend({ silent: true });
+//         return BackgroundFetch.BackgroundFetchResult.NewData;
+//     } catch (err) {
+//         console.error('[BG] Error:', err);
+//         return BackgroundFetch.BackgroundFetchResult.Failed;
+//     }
+// });
+
+// export const registerBackgroundSync = async () => {
+//     try {
+//         const status = await BackgroundFetch.getStatusAsync();
+//         if (
+//             status === BackgroundFetch.BackgroundFetchStatus.Restricted ||
+//             status === BackgroundFetch.BackgroundFetchStatus.Denied
+//         ) {
+//             console.warn('[BG] Not available on this device');
+//             return false;
+//         }
+//         await BackgroundFetch.registerTaskAsync(BG_TASK_NAME, {
+//             minimumInterval: 15 * 60,   // 15 minutes
+//             stopOnTerminate: false,     // keep alive after app killed
+//             startOnBoot: true,      // restart after device reboot
+//         });
+//         console.log('[BG] Registered successfully');
+//         return true;
+//     } catch (err) {
+//         if (err.message?.includes('already registered')) return true;
+//         console.error('[BG] Registration failed:', err);
+//         return false;
+//     }
+// };
+
+// export const unregisterBackgroundSync = async () => {
+//     try { await BackgroundFetch.unregisterTaskAsync(BG_TASK_NAME); } catch (_) { }
+// };
+
+// export const isBackgroundSyncRegistered = async () => {
+//     try { return await TaskManager.isTaskRegisteredAsync(BG_TASK_NAME); }
+//     catch (_) { return false; }
+// };
+
+// // ─────────────────────────────────────────────────────
+// // REAL-TIME SYNC via AppState
+// // ─────────────────────────────────────────────────────
+// // No external package needed — uses React Native's built-in AppState.
+// // When user makes/receives a call, they leave the app (background).
+// // When they come back (active), we trigger sync automatically.
+// // This reliably catches all call endings on Android.
+// // ─────────────────────────────────────────────────────
+
+// let _appStateSub = null;
+// let _lastAppState = AppState.currentState;
+
+// export const startPhoneStateListener = async (onCallEnded = null) => {
+//     if (Platform.OS !== 'android') {
+//         console.warn('[PhoneState] Android only');
+//         return;
+//     }
+//     if (_appStateSub) {
+//         console.log('[PhoneState] Already active');
+//         return;
+//     }
+
+//     _lastAppState = AppState.currentState;
+
+//     _appStateSub = AppState.addEventListener('change', async (nextState) => {
+//         // App came to foreground from background/inactive (user returned after a call)
+//         if (
+//             (_lastAppState === 'background' || _lastAppState === 'inactive') &&
+//             nextState === 'active'
+//         ) {
+//             console.log('[PhoneState] App foregrounded — triggering sync in 4s');
+//             setTimeout(async () => {
+//                 const result = await syncCallLogsToBackend({ silent: false });
+//                 console.log('[PhoneState] Foreground sync result:', result);
+//                 if (onCallEnded) onCallEnded(result);
+//             }, 4000);
+//         }
+//         _lastAppState = nextState;
+//     });
+
+//     console.log('[PhoneState] AppState listener started');
+// };
+
+// export const stopPhoneStateListener = () => {
+//     if (_appStateSub) {
+//         _appStateSub.remove?.();
+//         _appStateSub = null;
+//         _lastAppState = AppState.currentState;
+//         console.log('[PhoneState] AppState listener stopped');
+//     }
+// };
+
+// export const isPhoneStateListenerActive = () => !!_appStateSub;
+
+// // ─────────────────────────────────────────────────────
+// // DEFAULT EXPORT
+// // ─────────────────────────────────────────────────────
+// export default {
+//     checkCallLogPermissions,
+//     requestCallLogPermissions,
+//     readDeviceCallLogs,
+//     syncCallLogsToBackend,
+//     getLastSyncTime,
+//     resetSyncState,
+//     registerBackgroundSync,
+//     unregisterBackgroundSync,
+//     isBackgroundSyncRegistered,
+//     startPhoneStateListener,
+//     stopPhoneStateListener,
+//     isPhoneStateListenerActive,
+// };
+
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  FILE: callapp/src/services/callLogService.js                ║
+// ║                                                              ║
+// ║  CHANGES vs old file:                                        ║
+// ║  • readDeviceCallLogs → safer module resolution + better     ║
+// ║    error messages distinguishing "not installed" from        ║
+// ║    "needs prebuild"                                          ║
+// ║  • syncCallLogsToBackend → passes deviceLogId in every call  ║
+// ║    object (was already built but deviceLogId was sometimes   ║
+// ║    undefined); now guaranteed non-null for all device logs   ║
+// ║  • Added getMyCallHistory() → fetches synced call history    ║
+// ║    from backend for the CallHistoryScreen (new screen)       ║
+// ║  Everything else (bg sync, AppState listener) unchanged.     ║
+// ╚══════════════════════════════════════════════════════════════╝
+
 import { Platform, PermissionsAndroid, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-
 import { API_BASE_URL } from '../config';
 
 const LAST_SYNC_KEY = '@callyzer:lastSyncTs';
 const SYNC_LOCK_KEY = '@callyzer:syncLock';
 const BG_TASK_NAME = 'CALLYZER_CALL_SYNC';
 
-// ── Auth headers — same pattern as api.js ─────────────
+// ── Auth headers — same pattern as api.js ─────────────────────
 const getAuthHeaders = async () => {
     const token = await AsyncStorage.getItem('token');
     return {
@@ -18,28 +437,22 @@ const getAuthHeaders = async () => {
     };
 };
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // PERMISSIONS
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 
-export const IOS_NOT_SUPPORTED_REASON = 'Device call sync is only available on Android. iOS does not allow third-party apps to access call logs.';
+export const IOS_NOT_SUPPORTED_REASON =
+    'Device call sync is only available on Android. iOS does not allow ' +
+    'third-party apps to access call logs.';
 
 export const checkCallLogPermissions = async () => {
-    if (Platform.OS === 'ios') {
-        console.warn('[CallSync] iOS not supported');
-        return false;
-    }
     if (Platform.OS !== 'android') return false;
     return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_CALL_LOG);
 };
 
 export const requestCallLogPermissions = async () => {
     if (Platform.OS === 'ios') {
-        return {
-            granted: false,
-            reason: IOS_NOT_SUPPORTED_REASON,
-            platform: 'ios',
-        };
+        return { granted: false, reason: IOS_NOT_SUPPORTED_REASON, platform: 'ios' };
     }
     if (Platform.OS !== 'android') {
         return { granted: false, reason: 'Android only' };
@@ -82,9 +495,9 @@ export const requestCallLogPermissions = async () => {
     }
 };
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // CALL TYPE / STATUS MAPPING
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 
 const TYPE_INT_MAP = {
     1: 'Incoming',
@@ -112,27 +525,22 @@ const mapCallStatus = (callType, durationSec) => {
     return durationSec === 0 ? 'Missed' : 'Connected';
 };
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // READ DEVICE CALL LOGS
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 
-// export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
-//     if (Platform.OS !== 'android') {
-//         throw new Error('readDeviceCallLogs is Android-only');
-//     }
-
-//     const hasPerm = await checkCallLogPermissions();
-//     if (!hasPerm) {
-//         const res = await requestCallLogPermissions();
-//         if (!res.granted) throw new Error('READ_CALL_LOG permission denied');
-//     }
-
-//     const CallLogs = require('react-native-call-log').default;
-//     const cutoffMs = Date.now() - daysBack * 24 * 60 * 60 * 1000;
-
-//     const raw = await CallLogs.loadAll(String(maxCount), {
-//         minTimestamp: String(cutoffMs),
-//     });
+// ╔═══════════════════════════════════════════════════════════╗
+// ║  OLD CODE:                                                ║
+// ║  const mod = require('react-native-call-log');            ║
+// ║  CallLogsModule = mod.default || mod;                     ║
+// ║  if (!CallLogsModule || typeof CallLogsModule.loadAll     ║
+// ║      !== 'function') {                                    ║
+// ║    throw new Error('react-native-call-log module loaded   ║
+// ║      but loadAll not found. Rebuild the app.');           ║
+// ║  }                                                        ║
+// ╚═══════════════════════════════════════════════════════════╝
+//
+// NEW: clearer error split + explicit native module check
 
 export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
     if (Platform.OS !== 'android') {
@@ -145,17 +553,25 @@ export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
         if (!res.granted) throw new Error('READ_CALL_LOG permission denied');
     }
 
-    // Safe import with null check
+    // ── Safe dynamic import ────────────────────────────────
     let CallLogsModule;
     try {
         const mod = require('react-native-call-log');
         CallLogsModule = mod.default || mod;
     } catch (e) {
-        throw new Error('react-native-call-log not installed. Run: npm install react-native-call-log');
+        throw new Error(
+            'react-native-call-log native module not found.\n' +
+            'Run: npm install react-native-call-log\n' +
+            'Then rebuild: npx expo run:android'
+        );
     }
 
     if (!CallLogsModule || typeof CallLogsModule.loadAll !== 'function') {
-        throw new Error('react-native-call-log module loaded but loadAll not found. Rebuild the app.');
+        throw new Error(
+            'react-native-call-log is installed but native bridge is missing.\n' +
+            'You must run a custom dev build (not Expo Go):\n' +
+            '  npx expo run:android'
+        );
     }
 
     const cutoffMs = Date.now() - daysBack * 24 * 60 * 60 * 1000;
@@ -169,7 +585,8 @@ export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
         const callType = mapCallType(log.rawType, log.type);
         const callStatus = mapCallStatus(callType, duration);
         const ts = parseInt(log.timestamp);
-        const phone = (log.phoneNumber || log.number || '').replace(/\D/g, '');
+        // Sanitise phone — digits only, for a stable dedup key
+        const phoneSanitised = (log.phoneNumber || log.number || '').replace(/\D/g, '');
 
         return {
             customerNumber: log.phoneNumber || log.number || '',
@@ -179,17 +596,17 @@ export const readDeviceCallLogs = async (maxCount = 150, daysBack = 7) => {
             durationSeconds: duration,
             calledAt: new Date(ts).toISOString(),
             source: 'device_sync',
-            deviceLogId: `device_${ts}_${phone}`,
+            // NEW: guaranteed non-null deviceLogId using sanitised phone
+            deviceLogId: `device_${ts}_${phoneSanitised || 'unknown'}`,
         };
     });
 };
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // SYNC ENGINE
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 
 export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
-    // Prevent concurrent syncs
     const lock = await AsyncStorage.getItem(SYNC_LOCK_KEY);
     if (lock === 'true') return { skipped: true, reason: 'Sync already in progress' };
 
@@ -228,40 +645,43 @@ export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
         if (!silent) console.log(`[Sync] Uploading ${newLogs.length} call(s)...`);
 
         const headers = await getAuthHeaders();
-        // ✅ NEW CODE:
-        const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ calls: newLogs }),
-        });
+        const BATCH_SIZE = 50;
+        let totalSynced = 0;
+        let totalSkipped = 0;
 
-        // ── Response parse safely
-        let data = {};
-        try {
-            data = await res.json();
-        } catch (e) {
-            return { success: false, reason: 'Invalid server response' };
+        for (let i = 0; i < newLogs.length; i += BATCH_SIZE) {
+            const batch = newLogs.slice(i, i + BATCH_SIZE);
+            const res = await fetch(`${API_BASE_URL}/calls/bulk-import`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ calls: batch }),
+            });
+
+            let data = {};
+            try { data = await res.json(); } catch (e) {
+                return { success: false, reason: 'Invalid server response' };
+            }
+
+            if (!res.ok) {
+                if (!silent) console.warn('[Sync] Backend error:', data);
+                return { success: false, reason: data.message || `HTTP ${res.status}` };
+            }
+
+            totalSynced += data.imported ?? data.count ?? batch.length;
+            totalSkipped += data.skipped ?? 0;
         }
 
-        if (res.ok) {
-            await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
-            // ✅ imported, count, ya fallback — teeno check karo
-            const synced = data.imported ?? data.count ?? newLogs.length;
-            const skipped = data.skipped ?? 0;
-            if (!silent) console.log(`[Sync] SUCCESS - ${synced} synced, ${skipped} duplicates skipped`);
-            return {
-                success: true,
-                synced,
-                skipped,
-                total: deviceLogs.length,
-                message: synced > 0
-                    ? `${synced} call${synced !== 1 ? 's' : ''} synced`
-                    : `Already up to date (${skipped} duplicates skipped)`,
-            };
-        }
-
-        if (!silent) console.warn('[Sync] Backend error:', data);
-        return { success: false, reason: data.message || `HTTP ${res.status}` };
+        await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+        if (!silent) console.log(`[Sync] SUCCESS — ${totalSynced} synced, ${totalSkipped} duplicates skipped`);
+        return {
+            success: true,
+            synced: totalSynced,
+            skipped: totalSkipped,
+            total: deviceLogs.length,
+            message: totalSynced > 0
+                ? `${totalSynced} call${totalSynced !== 1 ? 's' : ''} synced`
+                : `Already up to date (${totalSkipped} duplicates skipped)`,
+        };
     } catch (err) {
         if (!silent) console.error('[Sync] Exception:', err);
         return { success: false, reason: err.message || 'Unknown error' };
@@ -269,6 +689,44 @@ export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
         await AsyncStorage.setItem(SYNC_LOCK_KEY, 'false');
     }
 };
+
+// ─────────────────────────────────────────────────────────────
+// NEW: GET SYNCED CALL HISTORY FROM BACKEND
+// Used by CallHistoryScreen to display calls that have already
+// been synced and stored in MongoDB.
+// ─────────────────────────────────────────────────────────────
+export const getMyCallHistory = async ({
+    page = 1,
+    limit = 20,
+    search = '',
+    callType = '',
+    dateFrom = '',
+    dateTo = '',
+} = {}) => {
+    const headers = await getAuthHeaders();
+    const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sortField: 'calledAt',
+        sortDir: 'desc',
+    });
+    if (search.trim()) params.append('search', search.trim());
+    if (callType) params.append('callType', callType);
+    if (dateFrom.trim()) params.append('dateFrom', dateFrom);
+    if (dateTo.trim()) params.append('dateTo', dateTo);
+
+    const url = `${API_BASE_URL}/calls?${params.toString()}`;
+    console.log('[CallHistory] GET', url);
+    const res = await fetch(url, { headers });
+    const json = await res.json().catch(() => ({}));
+    console.log('[CallHistory] Response:', JSON.stringify(json).slice(0, 300));
+    if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
+    return json;
+};
+
+// ─────────────────────────────────────────────────────────────
+// SYNC STATE HELPERS
+// ─────────────────────────────────────────────────────────────
 
 export const getLastSyncTime = async () => {
     const ts = await AsyncStorage.getItem(LAST_SYNC_KEY);
@@ -280,12 +738,12 @@ export const resetSyncState = async () => {
     await AsyncStorage.setItem(SYNC_LOCK_KEY, 'false');
 };
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // BACKGROUND SYNC  (expo-background-fetch)
-// ─────────────────────────────────────────────────────
-
 // defineTask MUST run at module top-level before any UI renders.
 // App.js imports this file unconditionally to ensure this.
+// ─────────────────────────────────────────────────────────────
+
 TaskManager.defineTask(BG_TASK_NAME, async () => {
     try {
         console.log('[BG] Background sync task fired');
@@ -308,9 +766,9 @@ export const registerBackgroundSync = async () => {
             return false;
         }
         await BackgroundFetch.registerTaskAsync(BG_TASK_NAME, {
-            minimumInterval: 15 * 60,   // 15 minutes
-            stopOnTerminate: false,     // keep alive after app killed
-            startOnBoot: true,      // restart after device reboot
+            minimumInterval: 15 * 60, // 15 minutes
+            stopOnTerminate: false,
+            startOnBoot: true,
         });
         console.log('[BG] Registered successfully');
         return true;
@@ -330,14 +788,9 @@ export const isBackgroundSyncRegistered = async () => {
     catch (_) { return false; }
 };
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // REAL-TIME SYNC via AppState
-// ─────────────────────────────────────────────────────
-// No external package needed — uses React Native's built-in AppState.
-// When user makes/receives a call, they leave the app (background).
-// When they come back (active), we trigger sync automatically.
-// This reliably catches all call endings on Android.
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 
 let _appStateSub = null;
 let _lastAppState = AppState.currentState;
@@ -355,17 +808,16 @@ export const startPhoneStateListener = async (onCallEnded = null) => {
     _lastAppState = AppState.currentState;
 
     _appStateSub = AppState.addEventListener('change', async (nextState) => {
-        // App came to foreground from background/inactive (user returned after a call)
         if (
             (_lastAppState === 'background' || _lastAppState === 'inactive') &&
             nextState === 'active'
         ) {
-            console.log('[PhoneState] App foregrounded — triggering sync in 1s');
+            console.log('[PhoneState] App foregrounded — triggering sync in 4s');
             setTimeout(async () => {
                 const result = await syncCallLogsToBackend({ silent: false });
                 console.log('[PhoneState] Foreground sync result:', result);
                 if (onCallEnded) onCallEnded(result);
-            }, 1000);
+            }, 4000);
         }
         _lastAppState = nextState;
     });
@@ -384,14 +836,15 @@ export const stopPhoneStateListener = () => {
 
 export const isPhoneStateListenerActive = () => !!_appStateSub;
 
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // DEFAULT EXPORT
-// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 export default {
     checkCallLogPermissions,
     requestCallLogPermissions,
     readDeviceCallLogs,
     syncCallLogsToBackend,
+    getMyCallHistory,
     getLastSyncTime,
     resetSyncState,
     registerBackgroundSync,

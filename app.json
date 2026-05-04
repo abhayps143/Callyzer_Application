@@ -33,7 +33,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-task-manager"
+      "expo-task-manager",
+      [
+        "expo-background-fetch",
+        {
+          "ios": {
+            "minimumInterval": 900
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

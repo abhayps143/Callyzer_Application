@@ -168,6 +168,7 @@ export default function BusinessDashboardScreen({ navigation }) {
             <View style={styles.quickGrid}>
                 {[
                     { icon: '📞', label: 'Call Logs',   color: C.blue,   soft: C.blueSoft,   screen: 'CallLogs' },
+                    { icon: '🔴', label: 'Live Feed', color: C.red, soft: C.redSoft, screen: 'LiveFeed' },
                     { icon: '📊', label: 'Reports',     color: C.purple, soft: C.purpleSoft, screen: 'Reports' },
                     { icon: '📲', label: 'Device Sync', color: C.green,  soft: C.greenSoft,  screen: 'DeviceCallSync' },
                     { icon: '🏆', label: 'Leaderboard', color: C.amber,  soft: C.amberSoft,  screen: 'Leaderboard' },
