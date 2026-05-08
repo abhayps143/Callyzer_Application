@@ -208,22 +208,29 @@ export default function LoginScreen({ navigation }) {
                         )}
                     </TouchableOpacity>
                     {/* Forgot Password - Modern Style */}
-                    <View style={styles.forgotContainer}>
+                    {/* ── Bottom Links — Stacked Layout ── */}
+                    <View style={styles.linksStack}>
+                        {/* Forgot Password */}
                         <TouchableOpacity
                             style={styles.forgotBtn}
                             onPress={() => setForgotModalVisible(true)}
                             activeOpacity={0.7}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Ionicons 
-                                    name="key-outline" 
-                                    size={14} 
-                                    color={C.primary} 
-                                    style={styles.forgotIcon} 
+                                <Ionicons
+                                    name="key-outline"
+                                    size={14}
+                                    color={C.primary}
+                                    style={styles.forgotIcon}
                                 />
                                 <Text style={styles.forgotText}>Forgot Password?</Text>
                             </View>
                         </TouchableOpacity>
+
+                        {/* Divider dot */}
+                        <View style={styles.linksDividerDot} />
+
+                        {/* Register */}
                         <TouchableOpacity
                             style={styles.registerLink}
                             onPress={() => navigation.navigate('Register')}
@@ -503,136 +510,149 @@ const styles = StyleSheet.create({
     },
 
     // ── Modern Modal Styles ─────────────────────────────
-modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backdropFilter: 'blur(5px)',
-},
-modalCard: {
-    backgroundColor: C.surface,
-    borderRadius: 32,
-    padding: 28,
-    width: width * 0.85,
-    maxWidth: 400,
-    alignItems: 'center',
-    ...shadowMd,
-    borderWidth: 1,
-    borderColor: C.border,
-},
-modalCloseBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 1,
-},
-modalIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: C.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-},
-modalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: C.text,
-    marginBottom: 8,
-    textAlign: 'center',
-},
-modalSubtitle: {
-    fontSize: 14,
-    color: C.textSub,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-},
-modalInput: {
-    backgroundColor: C.surfaceAlt,
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 15,
-    color: C.text,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    marginBottom: 20,
-    width: '100%',
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-},
-modalInputFocused: {
-    borderColor: C.primary,
-    backgroundColor: C.primarySoft,
-},
-modalBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    ...shadow,
-},
-modalBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 0.5,
-},
-modalCancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-},
-modalCancel: {
-    textAlign: 'center',
-    color: C.textMuted,
-    fontSize: 15,
-    fontWeight: '500',
-},
-divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-    width: '100%',
-},
-dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: C.border,
-},
-dividerText: {
-    marginHorizontal: 12,
-    color: C.textMuted,
-    fontSize: 12,
-},
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backdropFilter: 'blur(5px)',
+    },
+    modalCard: {
+        backgroundColor: C.surface,
+        borderRadius: 32,
+        padding: 28,
+        width: width * 0.85,
+        maxWidth: 400,
+        alignItems: 'center',
+        ...shadowMd,
+        borderWidth: 1,
+        borderColor: C.border,
+    },
+    modalCloseBtn: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 1,
+    },
+    modalIcon: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: C.primarySoft,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: C.text,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: C.textSub,
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    modalInput: {
+        backgroundColor: C.surfaceAlt,
+        borderRadius: 16,
+        padding: 16,
+        fontSize: 15,
+        color: C.text,
+        borderWidth: 1.5,
+        borderColor: C.border,
+        marginBottom: 20,
+        width: '100%',
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    },
+    modalInputFocused: {
+        borderColor: C.primary,
+        backgroundColor: C.primarySoft,
+    },
+    modalBtn: {
+        backgroundColor: C.primary,
+        borderRadius: 16,
+        paddingVertical: 16,
+        alignItems: 'center',
+        marginBottom: 12,
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+        ...shadow,
+    },
+    modalBtnText: {
+        color: '#FFFFFF',
+        fontWeight: '700',
+        fontSize: 16,
+        letterSpacing: 0.5,
+    },
+    modalCancelBtn: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+    },
+    modalCancel: {
+        textAlign: 'center',
+        color: C.textMuted,
+        fontSize: 15,
+        fontWeight: '500',
+    },
+    divider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 16,
+        width: '100%',
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: C.border,
+    },
+    dividerText: {
+        marginHorizontal: 12,
+        color: C.textMuted,
+        fontSize: 12,
+    },
 
-// ── Forgot Password New Styles ─────────────────────────────
-forgotContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-},
-forgotBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-},
-forgotText: {
-    color: C.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-    letterSpacing: 0.3,
-},
-forgotIcon: {
-    marginRight: 6,
-},
+    // ── Stacked bottom links ──────────────────
+    linksStack: {
+        alignItems: 'center',
+        marginTop: rs(16),
+        gap: rs(4),
+    },
+    forgotBtn: {
+        paddingVertical: rs(6),
+        paddingHorizontal: rs(12),
+        borderRadius: rs(20),
+    },
+    forgotText: {
+        color: C.primary,
+        fontSize: fs(13),
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+        letterSpacing: 0.2,
+    },
+    forgotIcon: {
+        marginRight: rs(5),
+    },
+    linksDividerDot: {
+        width: rs(3),
+        height: rs(3),
+        borderRadius: rs(2),
+        backgroundColor: C.border,
+        marginVertical: rs(2),
+    },
+    registerLink: {
+        paddingVertical: rs(6),
+        paddingHorizontal: rs(12),
+    },
+    registerLinkText: {
+        fontSize: fs(13),
+        color: C.textMuted,
+    },
 });

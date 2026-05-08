@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { api } from '../services/api';
 import { C, shadow, shadowMd, rs, fs, radius } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -75,8 +76,9 @@ export default function RegisterScreen({ navigation }) {
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1, backgroundColor: C.bg }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}   
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
             <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
             <ScrollView
@@ -167,8 +169,16 @@ export default function RegisterScreen({ navigation }) {
                             secureTextEntry={!pwdVisible}
                             autoCapitalize="none"
                         />
-                        <TouchableOpacity onPress={() => setPwdVisible(p => !p)} style={styles.eyeBtn}>
-                            <Text style={{ fontSize: fs(16) }}>{pwdVisible ? '🙈' : '👁️'}</Text>
+                        <TouchableOpacity
+                            onPress={() => setPwdVisible(p => !p)}
+                            style={styles.eyeBtn}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons
+                                name={pwdVisible ? 'eye-outline' : 'eye-off-outline'}
+                                size={fs(20)}
+                                color={C.textSub}
+                            />
                         </TouchableOpacity>
                     </View>
 
@@ -187,8 +197,16 @@ export default function RegisterScreen({ navigation }) {
                             secureTextEntry={!confirmPwdVisible}
                             autoCapitalize="none"
                         />
-                        <TouchableOpacity onPress={() => setConfirmPwdVisible(p => !p)} style={styles.eyeBtn}>
-                            <Text style={{ fontSize: fs(16) }}>{confirmPwdVisible ? '🙈' : '👁️'}</Text>
+                        <TouchableOpacity
+                            onPress={() => setConfirmPwdVisible(p => !p)}
+                            style={styles.eyeBtn}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons
+                                name={confirmPwdVisible ? 'eye-outline' : 'eye-off-outline'}
+                                size={fs(20)}
+                                color={C.textSub}
+                            />
                         </TouchableOpacity>
                     </View>
 
