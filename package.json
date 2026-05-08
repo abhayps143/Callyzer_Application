@@ -22,7 +22,7 @@
     "expo-background-fetch": "~55.0.15",
     "expo-dev-client": "~55.0.28",
     "expo-location": "~55.1.8",
-    "expo-notifications": "~55.0.20",
+    "expo-notifications": "~55.0.22",
     "expo-print": "~55.0.13",
     "expo-sharing": "~55.0.18",
     "expo-status-bar": "~55.0.5",
