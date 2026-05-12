@@ -22,7 +22,7 @@ import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import AdminSettingsScreen from '../screens/admin/AdminSettingsScreen';
  
 import BusinessDashboardScreen from '../screens/BusinessDashboardScreen';
-
+import SalespersonActivityScreen from '../screens/business/SalespersonActivityScreen';
 import MyTeamScreen from '../screens/MyTeamScreen';
 import SalespersonDashboardScreen from '../screens/SalespersonDashboardScreen';
 import BusinessLeadsScreen from '../screens/business/BusinessLeadsScreen';
@@ -59,6 +59,7 @@ const MENUS = {
         { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
         { id: 'LiveFeed',          label: 'Live Feed',   icon: '🔴' },
         { id: 'MyTeam',            label: 'My Team',     icon: '👥' },
+        { id: 'SalespersonActivity', label: 'SP Activity', icon: '📈' },
         { id: 'BusinessLeads',     label: 'Leads',       icon: '🎯' },  
         { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' }, 
         { id: 'DeviceCallSync',    label: 'Device Sync', icon: '📲' },
@@ -347,6 +348,9 @@ function BusinessUserStack() {
                 options={makeHeaderOptions('Live Feed', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="BusinessLeads" component={BusinessLeadsScreen}
                 options={makeHeaderOptions('Leads', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="SalespersonActivity" component={SalespersonActivityScreen}
+                options={makeHeaderOptions('SP Activity', userRef, logoutRef, currentRouteRef)} />
+
         </Stack.Navigator>
     );
 }
