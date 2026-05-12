@@ -1,8 +1,828 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// import React, { useState, useEffect, useCallback } from 'react';
+// import {
+//     View, Text, StyleSheet, ScrollView, ActivityIndicator,
+//     TouchableOpacity, RefreshControl, StatusBar, Dimensions, Alert
+// } from 'react-native';
+// import { api } from '../services/api';
+// import * as Print from 'expo-print';
+// import * as Sharing from 'expo-sharing';
+
+// const { width } = Dimensions.get('window');
+
+// // ── Helpers ───────────────────────────────────────────────────
+// const fmtDuration = (s) => {
+//     if (!s) return '0m';
+//     const h = Math.floor(s / 3600);
+//     const m = Math.floor((s % 3600) / 60);
+//     return h > 0 ? `${h}h ${m}m` : `${m}m`;
+// };
+
+// const getDateRange = (period) => {
+//     const now = new Date();
+//     const to = now.toISOString().split('T')[0];
+//     let from;
+//     if (period === 'today') { from = to; }
+//     else if (period === 'week') { const d = new Date(now); d.setDate(d.getDate() - 6); from = d.toISOString().split('T')[0]; }
+//     else if (period === 'month') { const d = new Date(now); d.setDate(1); from = d.toISOString().split('T')[0]; }
+//     else { const d = new Date(now); d.setMonth(d.getMonth() - 3); from = d.toISOString().split('T')[0]; }
+//     return { dateFrom: from, dateTo: to };
+// };
+
+// const buildDailyBuckets = (logs, period) => {
+//     const buckets = {};
+//     const now = new Date();
+//     const days = period === 'today' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : 90;
+//     for (let i = days - 1; i >= 0; i--) {
+//         const d = new Date(now); d.setDate(d.getDate() - i);
+//         const key = d.toISOString().split('T')[0];
+//         buckets[key] = { date: key, total: 0, connected: 0, missed: 0, rejected: 0 };
+//     }
+//     logs.forEach(log => {
+//         const key = log.calledAt ? log.calledAt.split('T')[0] : null;
+//         if (key && buckets[key]) {
+//             buckets[key].total++;
+//             if (log.callStatus === 'Connected') buckets[key].connected++;
+//             else if (log.callStatus === 'Missed') buckets[key].missed++;
+//             else if (log.callStatus === 'Rejected') buckets[key].rejected++;
+//         }
+//     });
+//     return Object.values(buckets);
+// };
+
+// // ── PDF HTML Generator ────────────────────────────────────────
+// const generatePdfHtml = ({ periodLabel, total, connected, missed, rejected, outgoing, incoming, connRate, avgDur, totalDur, dispEntries, logs, dateFrom, dateTo }) => {
+//     const dispRows = dispEntries.map(([label, count]) =>
+//         `<tr><td>${label}</td><td style="text-align:center">${count}</td><td style="text-align:center">${Math.round((count / total) * 100)}%</td></tr>`
+//     ).join('');
+
+//     const recentLogs = logs.slice(0, 30);
+//     const logRows = recentLogs.map(log => {
+//         const date = log.calledAt ? new Date(log.calledAt).toLocaleDateString('en-IN') : '—';
+//         const statusColor = log.callStatus === 'Connected' ? '#22c55e' : log.callStatus === 'Missed' ? '#ef4444' : '#f59e0b';
+//         return `<tr>
+//             <td>${log.customerName || 'Unknown'}</td>
+//             <td>${log.customerNumber || '—'}</td>
+//             <td>${log.callType || '—'}</td>
+//             <td style="color:${statusColor};font-weight:600">${log.callStatus || '—'}</td>
+//             <td>${fmtDuration(log.durationSeconds)}</td>
+//             <td>${log.disposition || '—'}</td>
+//             <td>${date}</td>
+//         </tr>`;
+//     }).join('');
+
+//     return `
+//     <!DOCTYPE html>
+//     <html>
+//     <head>
+//       <meta charset="utf-8"/>
+//       <style>
+//         * { margin: 0; padding: 0; box-sizing: border-box; }
+//         body { font-family: Arial, sans-serif; color: #1e293b; background: #fff; padding: 32px; }
+//         .header { background: linear-gradient(135deg, #0f172a, #1e3a5f); color: white; padding: 28px 32px; border-radius: 12px; margin-bottom: 28px; }
+//         .header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+//         .header p { color: #94a3b8; margin-top: 6px; font-size: 14px; }
+//         .header .meta { display: flex; gap: 24px; margin-top: 16px; }
+//         .header .meta span { background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; font-size: 13px; }
+//         h2 { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 14px; padding-left: 10px; border-left: 4px solid #6366f1; }
+//         .section { margin-bottom: 32px; }
+//         .cards { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 0; }
+//         .card { background: #f8fafc; border-radius: 10px; padding: 18px 20px; flex: 1; min-width: 130px; border-top: 3px solid #6366f1; }
+//         .card .val { font-size: 28px; font-weight: 800; }
+//         .card .lbl { font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500; }
+//         .c-purple { border-top-color: #6366f1; color: #6366f1; }
+//         .c-green  { border-top-color: #22c55e; color: #22c55e; }
+//         .c-red    { border-top-color: #ef4444; color: #ef4444; }
+//         .c-blue   { border-top-color: #3b82f6; color: #3b82f6; }
+//         .c-violet { border-top-color: #8b5cf6; color: #8b5cf6; }
+//         .c-amber  { border-top-color: #f59e0b; color: #f59e0b; }
+//         table { width: 100%; border-collapse: collapse; font-size: 13px; }
+//         th { background: #0f172a; color: white; padding: 10px 12px; text-align: left; font-weight: 600; }
+//         td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; }
+//         tr:nth-child(even) { background: #f8fafc; }
+//         .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+//         .bar-bg { background: #e2e8f0; border-radius: 4px; height: 8px; width: 100%; }
+//         .bar-fill { height: 8px; border-radius: 4px; }
+//         .dist-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+//         .dist-label { width: 90px; font-size: 13px; font-weight: 600; }
+//         .dist-val { width: 36px; text-align: right; font-size: 13px; color: #64748b; }
+//         .dist-pct { width: 40px; text-align: right; font-size: 12px; color: #94a3b8; }
+//         .dist-bar { flex: 1; }
+//       </style>
+//     </head>
+//     <body>
+//       <div class="header">
+//         <h1>📊 Reports & Analytics</h1>
+//         <p>Call performance report generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+//         <div class="meta">
+//           <span>📅 Period: ${periodLabel}</span>
+//           <span>📆 ${dateFrom} → ${dateTo}</span>
+//           <span>📞 ${total} Total Calls</span>
+//         </div>
+//       </div>
+
+//       <div class="section">
+//         <h2>Key Metrics</h2>
+//         <div class="cards">
+//           <div class="card"><div class="val c-purple">${total}</div><div class="lbl">Total Calls</div></div>
+//           <div class="card"><div class="val c-green">${connected}</div><div class="lbl">Connected</div></div>
+//           <div class="card"><div class="val c-red">${missed}</div><div class="lbl">Missed</div></div>
+//           <div class="card"><div class="val c-blue">${connRate}%</div><div class="lbl">Connect Rate</div></div>
+//           <div class="card"><div class="val c-violet">${fmtDuration(avgDur)}</div><div class="lbl">Avg Duration</div></div>
+//           <div class="card"><div class="val c-amber">${fmtDuration(totalDur)}</div><div class="lbl">Total Duration</div></div>
+//         </div>
+//       </div>
+
+//       <div class="section">
+//         <h2>Call Distribution</h2>
+//         <table>
+//           <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
+//           <tr><td>Outgoing</td><td>${outgoing}</td><td>${total ? Math.round((outgoing / total) * 100) : 0}%</td></tr>
+//           <tr><td>Incoming</td><td>${incoming}</td><td>${total ? Math.round((incoming / total) * 100) : 0}%</td></tr>
+//           <tr><td>Connected</td><td>${connected}</td><td>${total ? Math.round((connected / total) * 100) : 0}%</td></tr>
+//           <tr><td>Missed</td><td>${missed}</td><td>${total ? Math.round((missed / total) * 100) : 0}%</td></tr>
+//           <tr><td>Rejected</td><td>${rejected}</td><td>${total ? Math.round((rejected / total) * 100) : 0}%</td></tr>
+//         </table>
+//       </div>
+
+//       ${dispEntries.length > 0 ? `
+//       <div class="section">
+//         <h2>Disposition Breakdown</h2>
+//         <table>
+//           <tr><th>Disposition</th><th style="text-align:center">Count</th><th style="text-align:center">%</th></tr>
+//           ${dispRows}
+//         </table>
+//       </div>` : ''}
+
+//       ${recentLogs.length > 0 ? `
+//       <div class="section">
+//         <h2>Recent Call Logs (Last ${recentLogs.length})</h2>
+//         <table>
+//           <tr><th>Name</th><th>Number</th><th>Type</th><th>Status</th><th>Duration</th><th>Disposition</th><th>Date</th></tr>
+//           ${logRows}
+//         </table>
+//       </div>` : ''}
+
+//       <div class="footer">Generated by Callyzer App • ${new Date().toLocaleString('en-IN')}</div>
+//     </body>
+//     </html>`;
+// };
+
+// const PERIODS = [
+//     { key: 'today', label: 'Today', icon: '📅' },
+//     { key: 'week', label: 'This Week', icon: '📆' },
+//     { key: 'month', label: 'This Month', icon: '📊' },
+//     { key: 'quarter', label: 'Last 3M', icon: '📈' },
+// ];
+
+// const MiniBar = ({ value, max, color }) => (
+//     <View style={barStyles.bg}>
+//         <View style={[barStyles.fill, { width: `${Math.round((value / Math.max(max, 1)) * 100)}%`, backgroundColor: color }]} />
+//     </View>
+// );
+
+// export default function ReportsScreen() {
+//     const [period, setPeriod] = useState('month');
+//     const [logs, setLogs] = useState([]);
+//     const [loading, setLoading] = useState(true);
+//     const [refreshing, setRefreshing] = useState(false);
+//     const [error, setError] = useState('');
+//     const [exporting, setExporting] = useState(false);
+//     const [hourlyData, setHourlyData] = useState([]);
+//     const [peakHour, setPeakHour] = useState(null);
+//     const [agentReports, setAgentReports] = useState([]);
+
+//     const fetchData = useCallback(async () => {
+//         setError('');
+//         try {
+//             const { dateFrom, dateTo } = getDateRange(period);
+
+//             const [logsRes, hourlyRes, teamRes] = await Promise.allSettled([
+//                 api.getCallLogs({ dateFrom, dateTo, limit: 500, sortField: 'calledAt', sortDir: 'asc' }),
+//                 api.getHourlyReport(new Date().toISOString().split('T')[0]),   // ← ADD: aaj ka hourly
+//                 api.getTeamCallStats(),
+//             ]);
+
+//             // Logs
+//             if (logsRes.status === 'fulfilled') {
+//                 const r = logsRes.value;
+//                 setLogs(r?.logs || (Array.isArray(r) ? r : []));
+//             }
+
+//             // Hourly
+//             if (hourlyRes.status === 'fulfilled') {
+//                 const h = hourlyRes.value;
+//                 setHourlyData(h?.workHours || []);
+//                 setPeakHour(h?.peakHour || null);
+//             }
+
+//             // Team/Agent report
+//             if (teamRes.status === 'fulfilled') {
+//                 const t = teamRes.value;
+//                 setAgentReports(t?.agents || []);
+//             }
+//         } catch (e) {
+//             setError('Server se connect nahi ho pa raha');
+//         } finally {
+//             setLoading(false);
+//             setRefreshing(false);
+//         }
+//     }, [period]);
+
+//     useEffect(() => { setLoading(true); fetchData(); }, [fetchData]);
+//     const onRefresh = () => { setRefreshing(true); fetchData(); };
+
+//     // ── Computed ──────────────────────────────────────────────
+//     const total = logs.length;
+//     const connected = logs.filter(l => l.callStatus === 'Connected').length;
+//     const missed = logs.filter(l => l.callStatus === 'Missed').length;
+//     const rejected = logs.filter(l => l.callStatus === 'Rejected').length;
+//     const outgoing = logs.filter(l => l.callType === 'Outgoing').length;
+//     const incoming = logs.filter(l => l.callType === 'Incoming').length;
+//     const connRate = total ? Math.round((connected / total) * 100) : 0;
+//     const totalDur = logs.reduce((s, l) => s + (l.durationSeconds || 0), 0);
+//     const avgDur = total ? Math.round(totalDur / total) : 0;
+
+//     const dispositions = {};
+//     logs.forEach(l => { if (l.disposition) dispositions[l.disposition] = (dispositions[l.disposition] || 0) + 1; });
+//     const dispEntries = Object.entries(dispositions).sort((a, b) => b[1] - a[1]);
+
+//     const allBuckets = buildDailyBuckets(logs, period);
+//     const step = period === 'quarter' ? 7 : period === 'month' ? 3 : 1;
+//     const chartBuckets = allBuckets.filter((_, i, arr) => i % step === 0 || i === arr.length - 1);
+//     const maxBucket = Math.max(...allBuckets.map(b => b.total), 1);
+
+//     const summaryCards = [
+//         { title: 'Total Calls', value: String(total), color: '#6366f1', icon: '📞' },
+//         { title: 'Connected', value: String(connected), color: '#22c55e', icon: '✅' },
+//         { title: 'Missed', value: String(missed), color: '#ef4444', icon: '❌' },
+//         { title: 'Connect Rate', value: `${connRate}%`, color: '#3b82f6', icon: '📈' },
+//         { title: 'Avg Duration', value: fmtDuration(avgDur), color: '#8b5cf6', icon: '⏱' },
+//         { title: 'Total Duration', value: fmtDuration(totalDur), color: '#f59e0b', icon: '🕐' },
+//     ];
+
+//     const periodLabel = PERIODS.find(p => p.key === period)?.label || '';
+//     const { dateFrom, dateTo } = getDateRange(period);
+
+//     // ── Export PDF ────────────────────────────────────────────
+//     const handleExportPDF = async () => {
+//         if (total === 0) { Alert.alert('No Data', 'Is period mein koi data nahi hai export karne ke liye.'); return; }
+//         setExporting(true);
+//         try {
+//             const html = generatePdfHtml({ periodLabel, total, connected, missed, rejected, outgoing, incoming, connRate, avgDur, totalDur, dispEntries, logs, dateFrom, dateTo });
+//             const { uri } = await Print.printToFileAsync({ html, base64: false });
+//             const canShare = await Sharing.isAvailableAsync();
+//             if (canShare) {
+//                 await Sharing.shareAsync(uri, {
+//                     mimeType: 'application/pdf',
+//                     dialogTitle: `Report — ${periodLabel}`,
+//                     UTI: 'com.adobe.pdf',
+//                 });
+//             } else {
+//                 Alert.alert('Saved!', `PDF saved at:\n${uri}`);
+//             }
+//         } catch (e) {
+//             Alert.alert('Error', 'PDF export nahi ho paya. Dobara try karo.');
+//         } finally {
+//             setExporting(false);
+//         }
+//     };
+
+//     // ── Download = same as Export (share sheet se save hoga) ──
+//     const handleDownload = handleExportPDF;
+
+//     if (loading) {
+//         return (
+//             <View style={styles.center}>
+//                 <ActivityIndicator size="large" color="#6366f1" />
+//                 <Text style={styles.loadingText}>Loading reports...</Text>
+//             </View>
+//         );
+//     }
+
+//     return (
+//         <ScrollView
+//             style={styles.container}
+//             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
+//             showsVerticalScrollIndicator={false}
+//         >
+//             <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+
+//             {/* Header */}
+//             <View style={styles.header}>
+//                 <View>
+//                     <Text style={styles.title}>Reports & Analytics</Text>
+//                     <Text style={styles.subtitle}>Track your call performance metrics</Text>
+//                 </View>
+//                 <View style={styles.headerIcon}>
+//                     <Text style={styles.headerIconText}>📊</Text>
+//                 </View>
+//             </View>
+
+//             {/* Period Selector */}
+//             <View style={[styles.card, { marginTop: 16 }]}>
+//                 <Text style={styles.cardLabel}>SELECT PERIOD</Text>
+//                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+//                     {PERIODS.map(p => (
+//                         <TouchableOpacity
+//                             key={p.key}
+//                             style={[styles.periodBtn, period === p.key && styles.periodBtnActive]}
+//                             onPress={() => setPeriod(p.key)}
+//                         >
+//                             <Text style={styles.periodIcon}>{p.icon}</Text>
+//                             <Text style={[styles.periodBtnText, period === p.key && styles.periodBtnTextActive]}>{p.label}</Text>
+//                         </TouchableOpacity>
+//                     ))}
+//                 </ScrollView>
+//             </View>
+
+//             {/* ── Export / Download Buttons ── */}
+//             <View style={styles.exportRow}>
+//                 <TouchableOpacity
+//                     style={[styles.exportBtn, styles.exportBtnRed, exporting && styles.btnDisabled]}
+//                     onPress={handleExportPDF}
+//                     disabled={exporting}
+//                     activeOpacity={0.85}
+//                 >
+//                     {exporting
+//                         ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+//                         : <Text style={styles.exportBtnIcon}>📄</Text>
+//                     }
+//                     <Text style={styles.exportBtnText}>{exporting ? 'Generating...' : 'Export PDF'}</Text>
+//                 </TouchableOpacity>
+
+//                 <TouchableOpacity
+//                     style={[styles.exportBtn, styles.exportBtnBlue, exporting && styles.btnDisabled]}
+//                     onPress={handleDownload}
+//                     disabled={exporting}
+//                     activeOpacity={0.85}
+//                 >
+//                     <Text style={styles.exportBtnIcon}>⬇</Text>
+//                     <Text style={styles.exportBtnText}>Download Report</Text>
+//                 </TouchableOpacity>
+//             </View>
+
+//             {/* Error */}
+//             {!!error && (
+//                 <View style={styles.errorBox}>
+//                     <Text style={styles.errorText}>⚠️  {error}</Text>
+//                     <TouchableOpacity onPress={fetchData} style={styles.retryBtn}>
+//                         <Text style={styles.retryText}>Retry →</Text>
+//                     </TouchableOpacity>
+//                 </View>
+//             )}
+
+//             {/* Empty */}
+//             {!error && total === 0 && (
+//                 <View style={styles.emptyBox}>
+//                     <Text style={styles.emptyIcon}>📊</Text>
+//                     <Text style={styles.emptyTitle}>No Calls Found</Text>
+//                     <Text style={styles.emptyText}>"{periodLabel}" mein koi call log nahi hai</Text>
+//                     <Text style={styles.emptySubText}>Alag period select karo ya pehle calls add karo</Text>
+//                 </View>
+//             )}
+
+//             {total > 0 && (
+//                 <>
+//                     {/* Summary Cards */}
+//                     <View style={styles.section}>
+//                         <View style={styles.sectionHeader}>
+//                             <View style={styles.sectionBar} />
+//                             <Text style={styles.sectionTitle}>Key Metrics — {periodLabel}</Text>
+//                         </View>
+//                         <View style={styles.summaryGrid}>
+//                             {summaryCards.map((card, i) => (
+//                                 <View key={i} style={[styles.summaryCard, { borderTopColor: card.color }]}>
+//                                     <Text style={styles.summaryIcon}>{card.icon}</Text>
+//                                     <Text style={[styles.summaryValue, { color: card.color }]}>{card.value}</Text>
+//                                     <Text style={styles.summaryLabel}>{card.title}</Text>
+//                                 </View>
+//                             ))}
+//                         </View>
+//                     </View>
+
+//                     {/* Call Type Split */}
+//                     <View style={styles.section}>
+//                         <View style={styles.sectionHeader}>
+//                             <View style={styles.sectionBar} />
+//                             <Text style={styles.sectionTitle}>Call Type Split</Text>
+//                         </View>
+//                         <View style={[styles.card, { gap: 12 }]}>
+//                             {[
+//                                 { label: 'Outgoing', value: outgoing, color: '#6366f1' },
+//                                 { label: 'Incoming', value: incoming, color: '#3b82f6' },
+//                             ].map(item => (
+//                                 <View key={item.label} style={styles.distRow}>
+//                                     <View style={[styles.distDot, { backgroundColor: item.color }]} />
+//                                     <Text style={styles.distLabel}>{item.label}</Text>
+//                                     <MiniBar value={item.value} max={total} color={item.color} />
+//                                     <Text style={styles.distValue}>{item.value}</Text>
+//                                     <Text style={styles.distPct}>{total ? Math.round((item.value / total) * 100) : 0}%</Text>
+//                                 </View>
+//                             ))}
+//                         </View>
+//                     </View>
+
+//                     {/* Call Status Distribution */}
+//                     <View style={styles.section}>
+//                         <View style={styles.sectionHeader}>
+//                             <View style={styles.sectionBar} />
+//                             <Text style={styles.sectionTitle}>Call Status Distribution</Text>
+//                         </View>
+//                         <View style={[styles.card, { gap: 12 }]}>
+//                             {[
+//                                 { label: 'Connected', value: connected, color: '#22c55e' },
+//                                 { label: 'Missed', value: missed, color: '#ef4444' },
+//                                 { label: 'Rejected', value: rejected, color: '#f59e0b' },
+//                             ].map(item => (
+//                                 <View key={item.label} style={styles.distRow}>
+//                                     <View style={[styles.distDot, { backgroundColor: item.color }]} />
+//                                     <Text style={styles.distLabel}>{item.label}</Text>
+//                                     <MiniBar value={item.value} max={total} color={item.color} />
+//                                     <Text style={styles.distValue}>{item.value}</Text>
+//                                     <Text style={styles.distPct}>{total ? Math.round((item.value / total) * 100) : 0}%</Text>
+//                                 </View>
+//                             ))}
+//                         </View>
+//                     </View>
+
+//                     {/* Daily Trend */}
+//                     <View style={styles.section}>
+//                         <View style={styles.sectionHeader}>
+//                             <View style={styles.sectionBar} />
+//                             <Text style={styles.sectionTitle}>Daily Trend</Text>
+//                         </View>
+//                         <View style={styles.card}>
+//                             <View style={styles.legendRow}>
+//                                 {[['Connected', '#22c55e'], ['Missed', '#ef4444'], ['Rejected', '#f59e0b']].map(([l, c]) => (
+//                                     <View key={l} style={styles.legendItem}>
+//                                         <View style={[styles.legendDot, { backgroundColor: c }]} />
+//                                         <Text style={styles.legendText}>{l}</Text>
+//                                     </View>
+//                                 ))}
+//                             </View>
+//                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+//                                 <View style={styles.barChart}>
+//                                     {chartBuckets.map((b, i) => {
+//                                         const barH = 100;
+//                                         const connH = Math.round((b.connected / maxBucket) * barH);
+//                                         const missH = Math.round((b.missed / maxBucket) * barH);
+//                                         const rejH = Math.round((b.rejected / maxBucket) * barH);
+//                                         const label = period === 'today' ? 'Today' :
+//                                             period === 'week' ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][new Date(b.date).getDay()] :
+//                                                 b.date.slice(5);
+//                                         return (
+//                                             <View key={i} style={styles.barCol}>
+//                                                 <Text style={styles.barTopVal}>{b.total || ''}</Text>
+//                                                 <View style={{ height: barH, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
+//                                                     {connH > 0 && <View style={{ width: 8, height: connH, backgroundColor: '#22c55e', borderRadius: 3 }} />}
+//                                                     {missH > 0 && <View style={{ width: 8, height: missH, backgroundColor: '#ef4444', borderRadius: 3 }} />}
+//                                                     {rejH > 0 && <View style={{ width: 8, height: rejH, backgroundColor: '#f59e0b', borderRadius: 3 }} />}
+//                                                     {b.total === 0 && <View style={{ width: 8, height: 4, backgroundColor: '#e2e8f0', borderRadius: 3 }} />}
+//                                                 </View>
+//                                                 <Text style={styles.barXLabel}>{label}</Text>
+//                                             </View>
+//                                         );
+//                                     })}
+//                                 </View>
+//                             </ScrollView>
+//                         </View>
+//                     </View>
+
+//                     {/* Disposition Breakdown */}
+//                     {dispEntries.length > 0 && (
+//                         <View style={styles.section}>
+//                             <View style={styles.sectionHeader}>
+//                                 <View style={styles.sectionBar} />
+//                                 <Text style={styles.sectionTitle}>Disposition Breakdown</Text>
+//                             </View>
+//                             <View style={[styles.card, { gap: 12 }]}>
+//                                 {dispEntries.map(([label, count], i) => {
+//                                     const cols = ['#6366f1', '#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4'];
+//                                     const color = cols[i % cols.length];
+//                                     return (
+//                                         <View key={label} style={styles.distRow}>
+//                                             <View style={[styles.distDot, { backgroundColor: color }]} />
+//                                             <Text style={styles.distLabel}>{label}</Text>
+//                                             <MiniBar value={count} max={total} color={color} />
+//                                             <Text style={styles.distValue}>{count}</Text>
+//                                             <Text style={styles.distPct}>{Math.round((count / total) * 100)}%</Text>
+//                                         </View>
+//                                     );
+//                                 })}
+//                             </View>
+//                         </View>
+//                     )}
+
+//                     {/* ── Hourly Breakdown ───────────────── */}
+//                     {hourlyData.length > 0 && (
+//                         <View style={styles.section}>
+//                             <View style={styles.sectionHeader}>
+//                                 <View style={styles.sectionBar} />
+//                                 <Text style={styles.sectionTitle}>Today's Hourly Breakdown</Text>
+//                             </View>
+
+//                             {/* Peak Hour Banner */}
+//                             {peakHour && peakHour.total > 0 && (
+//                                 <View style={hourlyStyles.peakBanner}>
+//                                     <Text style={hourlyStyles.peakIcon}>🔥</Text>
+//                                     <View>
+//                                         <Text style={hourlyStyles.peakTitle}>
+//                                             Peak Hour: {peakHour.label}
+//                                         </Text>
+//                                         <Text style={hourlyStyles.peakSub}>
+//                                             {peakHour.total} calls · {peakHour.connected} connected
+//                                         </Text>
+//                                     </View>
+//                                 </View>
+//                             )}
+
+//                             {/* Hourly Bar Chart */}
+//                             <View style={styles.card}>
+//                                 <View style={styles.legendRow}>
+//                                     {[['Connected', '#22c55e'], ['Missed', '#ef4444'], ['Rejected', '#f59e0b']].map(([l, c]) => (
+//                                         <View key={l} style={styles.legendItem}>
+//                                             <View style={[styles.legendDot, { backgroundColor: c }]} />
+//                                             <Text style={styles.legendText}>{l}</Text>
+//                                         </View>
+//                                     ))}
+//                                 </View>
+//                                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+//                                     <View style={styles.barChart}>
+//                                         {hourlyData.map((h, i) => {
+//                                             const maxH = Math.max(...hourlyData.map(x => x.total), 1);
+//                                             const BAR = 90;
+//                                             const connH  = Math.round((h.connected / maxH) * BAR);
+//                                             const missH  = Math.round((h.missed    / maxH) * BAR);
+//                                             const rejH   = Math.round((h.rejected  / maxH) * BAR);
+//                                             const isPeak = peakHour && peakHour.hour === h.hour && h.total > 0;
+//                                             return (
+//                                                 <View key={i} style={styles.barCol}>
+//                                                     <Text style={[styles.barTopVal, isPeak && { color: '#f59e0b', fontWeight: '800' }]}>
+//                                                         {h.total || ''}
+//                                                     </Text>
+//                                                     <View style={{ height: BAR, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
+//                                                         {connH > 0 && <View style={{ width: 8, height: connH, backgroundColor: '#22c55e', borderRadius: 3 }} />}
+//                                                         {missH > 0 && <View style={{ width: 8, height: missH, backgroundColor: '#ef4444', borderRadius: 3 }} />}
+//                                                         {rejH  > 0 && <View style={{ width: 8, height: rejH,  backgroundColor: '#f59e0b', borderRadius: 3 }} />}
+//                                                         {h.total === 0 && <View style={{ width: 8, height: 3, backgroundColor: '#e2e8f0', borderRadius: 3 }} />}
+//                                                     </View>
+//                                                     <Text style={[styles.barXLabel, isPeak && { color: '#f59e0b' }]}>
+//                                                         {h.label}
+//                                                     </Text>
+//                                                 </View>
+//                                             );
+//                                         })}
+//                                     </View>
+//                                 </ScrollView>
+//                             </View>
+
+//                             {/* Hourly Table */}
+//                             <View style={[styles.card, { marginTop: 10, paddingHorizontal: 0, overflow: 'hidden' }]}>
+//                                 {/* Header row */}
+//                                 <View style={hourlyStyles.tableHeader}>
+//                                     <Text style={[hourlyStyles.th, { flex: 1.2 }]}>Hour</Text>
+//                                     <Text style={hourlyStyles.th}>Total</Text>
+//                                     <Text style={hourlyStyles.th}>✅</Text>
+//                                     <Text style={hourlyStyles.th}>❌</Text>
+//                                     <Text style={hourlyStyles.th}>Rate</Text>
+//                                 </View>
+//                                 {hourlyData.filter(h => h.total > 0).map((h, i) => {
+//                                     const rate = h.total > 0 ? Math.round((h.connected / h.total) * 100) : 0;
+//                                     const isPeak = peakHour && peakHour.hour === h.hour;
+//                                     return (
+//                                         <View
+//                                             key={i}
+//                                             style={[
+//                                                 hourlyStyles.tableRow,
+//                                                 i % 2 === 0 && { backgroundColor: '#f8fafc' },
+//                                                 isPeak && { backgroundColor: '#fffbeb' },
+//                                             ]}
+//                                         >
+//                                             <View style={[hourlyStyles.td, { flex: 1.2, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+//                                                 {isPeak && <Text style={{ fontSize: 12 }}>🔥</Text>}
+//                                                 <Text style={[hourlyStyles.tdText, { fontWeight: isPeak ? '800' : '600' }]}>
+//                                                     {h.label}
+//                                                 </Text>
+//                                             </View>
+//                                             <Text style={[hourlyStyles.tdText, hourlyStyles.td, { fontWeight: '700' }]}>{h.total}</Text>
+//                                             <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: '#22c55e' }]}>{h.connected}</Text>
+//                                             <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: '#ef4444' }]}>{h.missed}</Text>
+//                                             <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: rate >= 50 ? '#22c55e' : '#ef4444', fontWeight: '700' }]}>
+//                                                 {rate}%
+//                                             </Text>
+//                                         </View>
+//                                     );
+//                                 })}
+//                                 {hourlyData.every(h => h.total === 0) && (
+//                                     <Text style={hourlyStyles.noData}>No calls recorded today</Text>
+//                                 )}
+//                             </View>
+//                         </View>
+//                     )}
+//                     {/* ── Per Salesperson Report ─────────────── */}
+//                     {agentReports.length > 0 && (
+//                         <View style={styles.section}>
+//                             <View style={styles.sectionHeader}>
+//                                 <View style={styles.sectionBar} />
+//                                 <Text style={styles.sectionTitle}>Today's Team Performance</Text>
+//                             </View>
+//                             <View style={[styles.card, { paddingHorizontal: 0, overflow: 'hidden' }]}>
+//                                 {/* Table Header */}
+//                                 <View style={agentStyles.tableHead}>
+//                                     <Text style={[agentStyles.th, { flex: 2 }]}>Salesperson</Text>
+//                                     <Text style={agentStyles.th}>Calls</Text>
+//                                     <Text style={agentStyles.th}>✅</Text>
+//                                     <Text style={agentStyles.th}>Rate</Text>
+//                                 </View>
+//                                 {agentReports.map((agent, i) => {
+//                                     const rate = agent.totalCalls > 0
+//                                         ? Math.round((agent.connectedCalls / agent.totalCalls) * 100) : 0;
+//                                     return (
+//                                         <View key={agent._id || i}
+//                                             style={[agentStyles.row, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}>
+//                                             <View style={[agentStyles.td, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+//                                                 <View style={agentStyles.avatar}>
+//                                                     <Text style={agentStyles.avatarText}>
+//                                                         {(agent.name || 'S').charAt(0).toUpperCase()}
+//                                                     </Text>
+//                                                 </View>
+//                                                 <Text style={agentStyles.agentName} numberOfLines={1}>{agent.name}</Text>
+//                                             </View>
+//                                             <Text style={[agentStyles.tdText, agentStyles.td, { fontWeight: '700' }]}>
+//                                                 {agent.totalCalls}
+//                                             </Text>
+//                                             <Text style={[agentStyles.tdText, agentStyles.td, { color: '#22c55e' }]}>
+//                                                 {agent.connectedCalls}
+//                                             </Text>
+//                                             <Text style={[agentStyles.tdText, agentStyles.td,
+//                                                 { color: rate >= 50 ? '#22c55e' : '#ef4444', fontWeight: '700' }]}>
+//                                                 {rate}%
+//                                             </Text>
+//                                         </View>
+//                                     );
+//                                 })}
+//                             </View>
+//                         </View>
+//                     )}
+//                 </>
+//             )}
+
+//             <View style={{ height: 40 }} />
+//         </ScrollView>
+//     );
+// }
+
+// const barStyles = StyleSheet.create({
+//     bg: { flex: 1, height: 8, backgroundColor: '#f1f5f9', borderRadius: 6, marginHorizontal: 10, overflow: 'hidden' },
+//     fill: { height: 8, borderRadius: 6 },
+// });
+
+// const styles = StyleSheet.create({
+//     container: { flex: 1, backgroundColor: '#f1f5f9' },
+//     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9' },
+//     loadingText: { color: '#64748b', marginTop: 12, fontSize: 14, fontWeight: '500' },
+
+//     header: {
+//         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+//         paddingHorizontal: 20, paddingTop: 56, paddingBottom: 24,
+//         backgroundColor: '#0f172a', borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+//     },
+//     title: { color: '#ffffff', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+//     subtitle: { color: '#94a3b8', fontSize: 13, marginTop: 4 },
+//     headerIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#6366f120', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#6366f140' },
+//     headerIconText: { fontSize: 24 },
+
+//     card: { backgroundColor: '#ffffff', marginHorizontal: 16, borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+//     cardLabel: { color: '#64748b', fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
+
+//     periodBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
+//     periodIcon: { fontSize: 14 },
+//     periodBtnActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+//     periodBtnText: { color: '#64748b', fontSize: 13, fontWeight: '600' },
+//     periodBtnTextActive: { color: '#ffffff' },
+
+//     // ── Export Buttons ──────────────────────────────────────
+//     exportRow: {
+//         flexDirection: 'row', gap: 12,
+//         marginHorizontal: 16, marginTop: 14, marginBottom: 4,
+//     },
+//     exportBtn: {
+//         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+//         paddingVertical: 14, borderRadius: 14, gap: 8,
+//         shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+//         shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+//     },
+//     exportBtnRed: { backgroundColor: '#ef4444' },
+//     exportBtnBlue: { backgroundColor: '#2563eb' },
+//     exportBtnIcon: { fontSize: 16 },
+//     exportBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
+//     btnDisabled: { opacity: 0.6 },
+
+//     errorBox: { backgroundColor: '#fef2f2', marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#fecaca', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+//     errorText: { color: '#dc2626', fontSize: 13, flex: 1 },
+//     retryBtn: { marginLeft: 12 },
+//     retryText: { color: '#dc2626', fontWeight: '700', fontSize: 13 },
+
+//     emptyBox: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
+//     emptyIcon: { fontSize: 52, marginBottom: 16 },
+//     emptyTitle: { color: '#1e293b', fontSize: 18, fontWeight: '700', marginBottom: 8 },
+//     emptyText: { color: '#64748b', fontSize: 14, textAlign: 'center', marginBottom: 4 },
+//     emptySubText: { color: '#94a3b8', fontSize: 13, textAlign: 'center' },
+
+//     section: { marginTop: 20 },
+//     sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10 },
+//     sectionBar: { width: 4, height: 18, backgroundColor: '#6366f1', borderRadius: 2, marginRight: 10 },
+//     sectionTitle: { color: '#1e293b', fontSize: 15, fontWeight: '700' },
+
+//     summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10 },
+//     summaryCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 14, width: (width - 44) / 2, borderTopWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+//     summaryIcon: { fontSize: 20, marginBottom: 8 },
+//     summaryValue: { fontSize: 26, fontWeight: '800', marginBottom: 4 },
+//     summaryLabel: { color: '#64748b', fontSize: 12, fontWeight: '500' },
+
+//     distRow: { flexDirection: 'row', alignItems: 'center' },
+//     distDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
+//     distLabel: { color: '#1e293b', fontSize: 13, fontWeight: '600', width: 80 },
+//     distValue: { color: '#64748b', fontSize: 13, width: 36, textAlign: 'right', fontWeight: '500' },
+//     distPct: { color: '#94a3b8', fontSize: 12, width: 38, textAlign: 'right' },
+
+//     legendRow: { flexDirection: 'row', gap: 16, marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+//     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+//     legendDot: { width: 9, height: 9, borderRadius: 5 },
+//     legendText: { color: '#64748b', fontSize: 12, fontWeight: '500' },
+
+//     barChart: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingVertical: 4, paddingHorizontal: 4 },
+//     barCol: { alignItems: 'center', minWidth: 36 },
+//     barTopVal: { color: '#64748b', fontSize: 10, fontWeight: '600', marginBottom: 4, minHeight: 14 },
+//     barXLabel: { color: '#94a3b8', fontSize: 10, marginTop: 6, fontWeight: '500' },
+// });
+
+// const hourlyStyles = StyleSheet.create({
+//     peakBanner: {
+//         flexDirection: 'row', alignItems: 'center', gap: 12,
+//         backgroundColor: '#fffbeb', borderWidth: 1.5, borderColor: '#f59e0b',
+//         borderRadius: 14, marginHorizontal: 16, marginBottom: 10, padding: 14,
+//     },
+//     peakIcon:  { fontSize: 28 },
+//     peakTitle: { fontSize: 15, fontWeight: '800', color: '#92400E' },
+//     peakSub:   { fontSize: 12, color: '#B45309', marginTop: 2 },
+
+//     tableHeader: {
+//         flexDirection: 'row', backgroundColor: '#0f172a',
+//         paddingHorizontal: 16, paddingVertical: 10,
+//     },
+//     th: {
+//         flex: 1, color: '#fff', fontSize: 12,
+//         fontWeight: '700', textAlign: 'center',
+//     },
+//     tableRow: {
+//         flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10,
+//         borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+//     },
+//     td:     { flex: 1, justifyContent: 'center', alignItems: 'center' },
+//     tdText: { fontSize: 13, color: '#1e293b', textAlign: 'center' },
+//     noData: {
+//         textAlign: 'center', color: '#94a3b8',
+//         fontSize: 13, padding: 20,
+//     },
+// });
+
+// const agentStyles = StyleSheet.create({
+//     tableHead: {
+//         flexDirection: 'row', backgroundColor: '#0f172a',
+//         paddingHorizontal: 14, paddingVertical: 10,
+//     },
+//     th: {
+//         flex: 1, color: '#fff', fontSize: 12,
+//         fontWeight: '700', textAlign: 'center',
+//     },
+//     row: {
+//         flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 11,
+//         borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+//     },
+//     td:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
+//     tdText:   { fontSize: 13, color: '#1e293b', textAlign: 'center' },
+//     avatar: {
+//         width: 28, height: 28, borderRadius: 14,
+//         backgroundColor: '#EBF0FF', justifyContent: 'center', alignItems: 'center',
+//     },
+//     avatarText:  { fontSize: 13, fontWeight: '700', color: '#4A68F0' },
+//     agentName:   { fontSize: 13, fontWeight: '600', color: '#1e293b', flex: 1 },
+// });
+
+
+// src/screens/ReportsScreen.js
+// Role-based report screen matching Website Reports.jsx exactly:
+//   salesperson   → SalespersonReport  (GET /api/reports/my-calllogs)
+//   business_user → BusinessReport     (list salespersons → drill into one)
+//   super_admin   → GenericReport      (GET /api/reports/summary?period=)
+
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
-    TouchableOpacity, RefreshControl, StatusBar, Dimensions, Alert
+    TouchableOpacity, RefreshControl, StatusBar, Dimensions, Alert, TextInput,
 } from 'react-native';
+import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -10,169 +830,20 @@ import * as Sharing from 'expo-sharing';
 const { width } = Dimensions.get('window');
 
 // ── Helpers ───────────────────────────────────────────────────
-const fmtDuration = (s) => {
-    if (!s) return '0m';
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+const todayStr = () => new Date().toISOString().split('T')[0];
+
+const fmtDuration = (sec) => {
+    if (!sec || sec === 0) return '0s';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.round(sec % 60);
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
 };
 
-const getDateRange = (period) => {
-    const now = new Date();
-    const to = now.toISOString().split('T')[0];
-    let from;
-    if (period === 'today') { from = to; }
-    else if (period === 'week') { const d = new Date(now); d.setDate(d.getDate() - 6); from = d.toISOString().split('T')[0]; }
-    else if (period === 'month') { const d = new Date(now); d.setDate(1); from = d.toISOString().split('T')[0]; }
-    else { const d = new Date(now); d.setMonth(d.getMonth() - 3); from = d.toISOString().split('T')[0]; }
-    return { dateFrom: from, dateTo: to };
-};
-
-const buildDailyBuckets = (logs, period) => {
-    const buckets = {};
-    const now = new Date();
-    const days = period === 'today' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : 90;
-    for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(now); d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        buckets[key] = { date: key, total: 0, connected: 0, missed: 0, rejected: 0 };
-    }
-    logs.forEach(log => {
-        const key = log.calledAt ? log.calledAt.split('T')[0] : null;
-        if (key && buckets[key]) {
-            buckets[key].total++;
-            if (log.callStatus === 'Connected') buckets[key].connected++;
-            else if (log.callStatus === 'Missed') buckets[key].missed++;
-            else if (log.callStatus === 'Rejected') buckets[key].rejected++;
-        }
-    });
-    return Object.values(buckets);
-};
-
-// ── PDF HTML Generator ────────────────────────────────────────
-const generatePdfHtml = ({ periodLabel, total, connected, missed, rejected, outgoing, incoming, connRate, avgDur, totalDur, dispEntries, logs, dateFrom, dateTo }) => {
-    const dispRows = dispEntries.map(([label, count]) =>
-        `<tr><td>${label}</td><td style="text-align:center">${count}</td><td style="text-align:center">${Math.round((count / total) * 100)}%</td></tr>`
-    ).join('');
-
-    const recentLogs = logs.slice(0, 30);
-    const logRows = recentLogs.map(log => {
-        const date = log.calledAt ? new Date(log.calledAt).toLocaleDateString('en-IN') : '—';
-        const statusColor = log.callStatus === 'Connected' ? '#22c55e' : log.callStatus === 'Missed' ? '#ef4444' : '#f59e0b';
-        return `<tr>
-            <td>${log.customerName || 'Unknown'}</td>
-            <td>${log.customerNumber || '—'}</td>
-            <td>${log.callType || '—'}</td>
-            <td style="color:${statusColor};font-weight:600">${log.callStatus || '—'}</td>
-            <td>${fmtDuration(log.durationSeconds)}</td>
-            <td>${log.disposition || '—'}</td>
-            <td>${date}</td>
-        </tr>`;
-    }).join('');
-
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; color: #1e293b; background: #fff; padding: 32px; }
-        .header { background: linear-gradient(135deg, #0f172a, #1e3a5f); color: white; padding: 28px 32px; border-radius: 12px; margin-bottom: 28px; }
-        .header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
-        .header p { color: #94a3b8; margin-top: 6px; font-size: 14px; }
-        .header .meta { display: flex; gap: 24px; margin-top: 16px; }
-        .header .meta span { background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; font-size: 13px; }
-        h2 { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 14px; padding-left: 10px; border-left: 4px solid #6366f1; }
-        .section { margin-bottom: 32px; }
-        .cards { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 0; }
-        .card { background: #f8fafc; border-radius: 10px; padding: 18px 20px; flex: 1; min-width: 130px; border-top: 3px solid #6366f1; }
-        .card .val { font-size: 28px; font-weight: 800; }
-        .card .lbl { font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500; }
-        .c-purple { border-top-color: #6366f1; color: #6366f1; }
-        .c-green  { border-top-color: #22c55e; color: #22c55e; }
-        .c-red    { border-top-color: #ef4444; color: #ef4444; }
-        .c-blue   { border-top-color: #3b82f6; color: #3b82f6; }
-        .c-violet { border-top-color: #8b5cf6; color: #8b5cf6; }
-        .c-amber  { border-top-color: #f59e0b; color: #f59e0b; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #0f172a; color: white; padding: 10px 12px; text-align: left; font-weight: 600; }
-        td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; }
-        tr:nth-child(even) { background: #f8fafc; }
-        .footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
-        .bar-bg { background: #e2e8f0; border-radius: 4px; height: 8px; width: 100%; }
-        .bar-fill { height: 8px; border-radius: 4px; }
-        .dist-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-        .dist-label { width: 90px; font-size: 13px; font-weight: 600; }
-        .dist-val { width: 36px; text-align: right; font-size: 13px; color: #64748b; }
-        .dist-pct { width: 40px; text-align: right; font-size: 12px; color: #94a3b8; }
-        .dist-bar { flex: 1; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>📊 Reports & Analytics</h1>
-        <p>Call performance report generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-        <div class="meta">
-          <span>📅 Period: ${periodLabel}</span>
-          <span>📆 ${dateFrom} → ${dateTo}</span>
-          <span>📞 ${total} Total Calls</span>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>Key Metrics</h2>
-        <div class="cards">
-          <div class="card"><div class="val c-purple">${total}</div><div class="lbl">Total Calls</div></div>
-          <div class="card"><div class="val c-green">${connected}</div><div class="lbl">Connected</div></div>
-          <div class="card"><div class="val c-red">${missed}</div><div class="lbl">Missed</div></div>
-          <div class="card"><div class="val c-blue">${connRate}%</div><div class="lbl">Connect Rate</div></div>
-          <div class="card"><div class="val c-violet">${fmtDuration(avgDur)}</div><div class="lbl">Avg Duration</div></div>
-          <div class="card"><div class="val c-amber">${fmtDuration(totalDur)}</div><div class="lbl">Total Duration</div></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>Call Distribution</h2>
-        <table>
-          <tr><th>Category</th><th>Count</th><th>Percentage</th></tr>
-          <tr><td>Outgoing</td><td>${outgoing}</td><td>${total ? Math.round((outgoing / total) * 100) : 0}%</td></tr>
-          <tr><td>Incoming</td><td>${incoming}</td><td>${total ? Math.round((incoming / total) * 100) : 0}%</td></tr>
-          <tr><td>Connected</td><td>${connected}</td><td>${total ? Math.round((connected / total) * 100) : 0}%</td></tr>
-          <tr><td>Missed</td><td>${missed}</td><td>${total ? Math.round((missed / total) * 100) : 0}%</td></tr>
-          <tr><td>Rejected</td><td>${rejected}</td><td>${total ? Math.round((rejected / total) * 100) : 0}%</td></tr>
-        </table>
-      </div>
-
-      ${dispEntries.length > 0 ? `
-      <div class="section">
-        <h2>Disposition Breakdown</h2>
-        <table>
-          <tr><th>Disposition</th><th style="text-align:center">Count</th><th style="text-align:center">%</th></tr>
-          ${dispRows}
-        </table>
-      </div>` : ''}
-
-      ${recentLogs.length > 0 ? `
-      <div class="section">
-        <h2>Recent Call Logs (Last ${recentLogs.length})</h2>
-        <table>
-          <tr><th>Name</th><th>Number</th><th>Type</th><th>Status</th><th>Duration</th><th>Disposition</th><th>Date</th></tr>
-          ${logRows}
-        </table>
-      </div>` : ''}
-
-      <div class="footer">Generated by Callyzer App • ${new Date().toLocaleString('en-IN')}</div>
-    </body>
-    </html>`;
-};
-
-const PERIODS = [
-    { key: 'today', label: 'Today', icon: '📅' },
-    { key: 'week', label: 'This Week', icon: '📆' },
-    { key: 'month', label: 'This Month', icon: '📊' },
-    { key: 'quarter', label: 'Last 3M', icon: '📈' },
-];
+const fmtDateTime = (d) =>
+    d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
 const MiniBar = ({ value, max, color }) => (
     <View style={barStyles.bg}>
@@ -180,506 +851,660 @@ const MiniBar = ({ value, max, color }) => (
     </View>
 );
 
-export default function ReportsScreen() {
-    const [period, setPeriod] = useState('month');
-    const [logs, setLogs] = useState([]);
+function StatusBadge({ status }) {
+    const cfg = {
+        Connected: { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
+        Missed: { bg: '#FFF1F2', text: '#9F1239', border: '#FECDD3' },
+        Rejected: { bg: '#FFFBEB', text: '#92400E', border: '#FDE68A' },
+    };
+    const c = cfg[status] || cfg.Rejected;
+    return (
+        <View style={{ backgroundColor: c.bg, borderColor: c.border, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 }}>
+            <Text style={{ color: c.text, fontSize: 11, fontWeight: '600' }}>{status}</Text>
+        </View>
+    );
+}
+
+function DonutRate({ rate }) {
+    const color = rate >= 50 ? '#10B981' : '#F43F5E';
+    return (
+        <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 8 }}>
+            <View style={{ width: 110, height: 110, borderRadius: 55, borderWidth: 12, borderColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, borderWidth: 12, borderColor: color }} />
+                <Text style={{ fontSize: 22, fontWeight: '800', color: '#1e293b' }}>{rate}%</Text>
+                <Text style={{ fontSize: 10, color: '#94a3b8' }}>Rate</Text>
+            </View>
+        </View>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SALESPERSON REPORT
+//  API: GET /api/reports/my-calllogs?fromDate=&toDate=
+//  Response: { summary: { total, connected, notConnected, missed, rejected, connectRate, totalDuration, avgDuration }, calls: [...] }
+// ══════════════════════════════════════════════════════════════
+function SalespersonReport({ user }) {
+    const [fromDate, setFromDate] = useState(todayStr());
+    const [toDate, setToDate] = useState(todayStr());
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [data, setData] = useState(null);
+    const [error, setError] = useState('');
+    const [exporting, setExporting] = useState(false);
+
+    const fetchReport = useCallback(async () => {
+        setError('');
+        try {
+            const res = await api.getMyCallLogReport({ fromDate, toDate });
+            if (res?.summary) {
+                setData(res);
+            } else {
+                setError(res?.message || 'Failed to load report.');
+            }
+        } catch {
+            setError('Cannot connect to server. Please try again.');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [fromDate, toDate]);
+
+    useEffect(() => { setLoading(true); fetchReport(); }, [fetchReport]);
+    const onRefresh = () => { setRefreshing(true); fetchReport(); };
+
+    const summary = data?.summary || {};
+    const calls = data?.calls || [];
+
+    const handleExportPDF = async () => {
+        if (!calls.length) { Alert.alert('No Data', 'No calls found for the selected date range.'); return; }
+        setExporting(true);
+        try {
+            const logRows = calls.slice(0, 30).map(c => {
+                const sc = c.callStatus === 'Connected' ? '#22c55e' : c.callStatus === 'Missed' ? '#ef4444' : '#f59e0b';
+                return `<tr>
+                    <td>${fmtDateTime(c.calledAt)}</td>
+                    <td>${c.customerName || 'Unknown'}</td><td>${c.customerNumber || '—'}</td>
+                    <td>${c.callType || '—'}</td>
+                    <td style="color:${sc};font-weight:600">${c.callStatus || '—'}</td>
+                    <td>${fmtDuration(c.durationSeconds)}</td><td>${c.disposition || '—'}</td>
+                </tr>`;
+            }).join('');
+            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+            <style>body{font-family:Arial,sans-serif;color:#1e293b;padding:24px}
+            .hdr{background:#0f172a;color:#fff;padding:20px;border-radius:8px;margin-bottom:20px}
+            h1{font-size:22px;margin:0}p{font-size:13px;color:#94a3b8;margin:4px 0 0}
+            .cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+            .card{background:#f8fafc;border-radius:8px;padding:14px;flex:1;min-width:110px;border-top:3px solid #6366f1}
+            .val{font-size:24px;font-weight:800}.lbl{font-size:11px;color:#64748b;margin-top:2px}
+            table{width:100%;border-collapse:collapse;font-size:12px}
+            th{background:#0f172a;color:#fff;padding:8px 10px;text-align:left}
+            td{padding:7px 10px;border-bottom:1px solid #f1f5f9}tr:nth-child(even){background:#f8fafc}
+            </style></head><body>
+            <div class="hdr"><h1>📊 My Call Report</h1>
+            <p>${user?.name || ''} • ${fromDate} → ${toDate} • Generated ${new Date().toLocaleDateString('en-IN')}</p></div>
+            <div class="cards">
+                <div class="card"><div class="val" style="color:#3B82F6">${summary.total ?? 0}</div><div class="lbl">Total Calls</div></div>
+                <div class="card"><div class="val" style="color:#10B981">${summary.connected ?? 0}</div><div class="lbl">Connected</div></div>
+                <div class="card"><div class="val" style="color:#F43F5E">${summary.notConnected ?? 0}</div><div class="lbl">Not Connected</div></div>
+                <div class="card"><div class="val" style="color:#8B5CF6">${summary.connectRate ?? 0}%</div><div class="lbl">Connect Rate</div></div>
+                <div class="card"><div class="val" style="color:#F59E0B">${summary.totalDuration || '0s'}</div><div class="lbl">Total Duration</div></div>
+                <div class="card"><div class="val" style="color:#06B6D4">${summary.avgDuration || '0s'}</div><div class="lbl">Avg Duration</div></div>
+            </div>
+            ${calls.length > 0 ? `<table><tr><th>Date & Time</th><th>Customer</th><th>Phone</th><th>Type</th><th>Status</th><th>Duration</th><th>Disposition</th></tr>${logRows}</table>` : ''}
+            </body></html>`;
+            const { uri } = await Print.printToFileAsync({ html, base64: false });
+            const canShare = await Sharing.isAvailableAsync();
+            if (canShare) {
+                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'My Call Report', UTI: 'com.adobe.pdf' });
+            } else {
+                Alert.alert('Saved!', `PDF saved at:\n${uri}`);
+            }
+        } catch {
+            Alert.alert('Error', 'Could not export PDF. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    if (loading && !refreshing) {
+        return <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /><Text style={styles.loadingText}>Loading report...</Text></View>;
+    }
+
+    return (
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />} showsVerticalScrollIndicator={false}>
+            <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+            <View style={styles.header}>
+                <View><Text style={styles.title}>My Call Report</Text><Text style={styles.subtitle}>Your personal call performance</Text></View>
+                <View style={styles.headerIcon}><Text style={styles.headerIconText}>📊</Text></View>
+            </View>
+
+            <View style={{ paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
+                {/* Date Filter */}
+                <View style={styles.card}>
+                    <Text style={styles.cardLabel}>DATE RANGE  •  Default: Today</Text>
+                    <View style={styles.dateRow}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.dateLabel}>FROM</Text>
+                            <TextInput style={styles.dateInput} value={fromDate} onChangeText={setFromDate} placeholder="YYYY-MM-DD" placeholderTextColor="#94a3b8" />
+                        </View>
+                        <Text style={{ color: '#64748b', marginTop: 22, marginHorizontal: 8 }}>→</Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.dateLabel}>TO</Text>
+                            <TextInput style={styles.dateInput} value={toDate} onChangeText={setToDate} placeholder="YYYY-MM-DD" placeholderTextColor="#94a3b8" />
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.exportRow}>
+                    <TouchableOpacity style={[styles.exportBtn, { backgroundColor: '#3B82F6' }]} onPress={() => { setLoading(true); fetchReport(); }} activeOpacity={0.85}>
+                        <Text style={styles.exportBtnIcon}>🔍</Text><Text style={styles.exportBtnText}>Apply Filter</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.exportBtn, { backgroundColor: '#ef4444', opacity: exporting ? 0.6 : 1 }]} onPress={handleExportPDF} disabled={exporting} activeOpacity={0.85}>
+                        {exporting ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} /> : <Text style={styles.exportBtnIcon}>📄</Text>}
+                        <Text style={styles.exportBtnText}>{exporting ? 'Exporting...' : 'Export PDF'}</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {!!error && (
+                    <View style={styles.errorBox}>
+                        <Text style={styles.errorText}>⚠️  {error}</Text>
+                        <TouchableOpacity onPress={fetchReport} style={styles.retryBtn}><Text style={styles.retryText}>Retry →</Text></TouchableOpacity>
+                    </View>
+                )}
+
+                {loading ? <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /></View> : (
+                    <>
+                        {/* Summary Stats */}
+                        <View style={styles.statsGrid}>
+                            {[
+                                { label: 'Total Calls', value: summary.total ?? 0, color: '#3B82F6', icon: '📞' },
+                                { label: 'Connected', value: summary.connected ?? 0, color: '#10B981', icon: '✅' },
+                                { label: 'Not Connected', value: summary.notConnected ?? 0, color: '#F43F5E', icon: '❌' },
+                                { label: 'Total Duration', value: summary.totalDuration || '0s', color: '#8B5CF6', icon: '⏱' },
+                            ].map((card, i) => (
+                                <View key={i} style={[styles.statCard, { borderTopColor: card.color }]}>
+                                    <Text style={styles.statIcon}>{card.icon}</Text>
+                                    <Text style={[styles.statValue, { color: card.color }]}>{String(card.value)}</Text>
+                                    <Text style={styles.statLabel}>{card.label}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Connection Rate */}
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Connection Rate</Text>
+                            <DonutRate rate={summary.connectRate ?? 0} />
+                            <View style={{ gap: 6, marginTop: 8 }}>
+                                {[['Connected', summary.connected ?? 0, '#10B981'], ['Missed', summary.missed ?? 0, '#F43F5E'], ['Rejected', summary.rejected ?? 0, '#F59E0B']].map(([label, value, color]) => (
+                                    <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                        <Text style={{ color: '#64748b', fontSize: 13 }}>{label}</Text>
+                                        <Text style={{ fontWeight: '600', color, fontSize: 13 }}>{value}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Duration Summary */}
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Duration Summary</Text>
+                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                <View style={{ flex: 1, backgroundColor: '#F5F3FF', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 20, fontWeight: '800', color: '#7C3AED' }}>{summary.totalDuration || '0s'}</Text>
+                                    <Text style={{ fontSize: 11, color: '#8B5CF6', marginTop: 4 }}>Total Talk Time</Text>
+                                </View>
+                                <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 20, fontWeight: '800', color: '#2563EB' }}>{summary.avgDuration || '0s'}</Text>
+                                    <Text style={{ fontSize: 11, color: '#3B82F6', marginTop: 4 }}>Avg per Call</Text>
+                                </View>
+                            </View>
+                            <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', gap: 4 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={{ color: '#64748b', fontSize: 12 }}>Date range</Text>
+                                    <Text style={{ color: '#1e293b', fontSize: 12, fontWeight: '500' }}>{fromDate} → {toDate}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={{ color: '#64748b', fontSize: 12 }}>Salesperson</Text>
+                                    <Text style={{ color: '#1e293b', fontSize: 12, fontWeight: '500' }}>{user?.name}</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Call List */}
+                        {calls.length === 0 ? (
+                            <View style={styles.emptyBox}>
+                                <Text style={styles.emptyIcon}>📊</Text>
+                                <Text style={styles.emptyTitle}>No Calls Found</Text>
+                                <Text style={styles.emptyText}>No call logs for the selected date range.</Text>
+                            </View>
+                        ) : (
+                            <View style={[styles.card, { paddingHorizontal: 0 }]}>
+                                <View style={{ paddingHorizontal: 14, paddingBottom: 10, flexDirection: 'row', gap: 8 }}>
+                                    <Text style={styles.sectionTitle}>Call List ({calls.length})</Text>
+                                </View>
+                                <View style={[tableStyles.header, { backgroundColor: '#0f172a' }]}>
+                                    <Text style={[tableStyles.th, { flex: 1.4 }]}>Date & Time</Text>
+                                    <Text style={[tableStyles.th, { flex: 1.2 }]}>Customer</Text>
+                                    <Text style={tableStyles.th}>Type</Text>
+                                    <Text style={tableStyles.th}>Status</Text>
+                                    <Text style={tableStyles.th}>Duration</Text>
+                                </View>
+                                {calls.map((call, i) => (
+                                    <View key={call._id || i} style={[tableStyles.row, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}>
+                                        <View style={{ flex: 1.4, paddingRight: 4 }}>
+                                            <Text style={{ fontSize: 10, color: '#64748b' }} numberOfLines={2}>{fmtDateTime(call.calledAt)}</Text>
+                                        </View>
+                                        <View style={{ flex: 1.2, paddingRight: 4 }}>
+                                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#1e293b' }} numberOfLines={1}>{call.customerName || 'Unknown'}</Text>
+                                            <Text style={{ fontSize: 10, color: '#94a3b8' }} numberOfLines={1}>{call.customerNumber}</Text>
+                                        </View>
+                                        <View style={{ flex: 1, alignItems: 'center' }}>
+                                            <Text style={{ fontSize: 10, fontWeight: '600', color: call.callType === 'Outgoing' ? '#3B82F6' : '#8B5CF6' }}>
+                                                {call.callType === 'Outgoing' ? '↑ Out' : '↓ In'}
+                                            </Text>
+                                        </View>
+                                        <View style={{ flex: 1, alignItems: 'center' }}><StatusBadge status={call.callStatus} /></View>
+                                        <View style={{ flex: 1, alignItems: 'center' }}>
+                                            <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500' }}>{fmtDuration(call.durationSeconds)}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </>
+                )}
+            </View>
+            <View style={{ height: 40 }} />
+        </ScrollView>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BUSINESS USER — SALESPERSON DETAIL REPORT
+//  API: GET /api/reports/salesperson/:id?fromDate=&toDate=
+// ══════════════════════════════════════════════════════════════
+function BusinessSalespersonDetail({ salesperson, onBack }) {
+    const [fromDate, setFromDate] = useState(todayStr());
+    const [toDate, setToDate] = useState(todayStr());
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [data, setData] = useState(null);
+    const [error, setError] = useState('');
+    const [exporting, setExporting] = useState(false);
+
+    const fetchReport = useCallback(async () => {
+        setError('');
+        try {
+            const res = await api.getSalespersonCallReport(salesperson._id || salesperson.id, { fromDate, toDate });
+            if (res?.summary) {
+                setData(res);
+            } else {
+                setError(res?.message || 'Failed to load report.');
+            }
+        } catch {
+            setError('Cannot connect to server. Please try again.');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [salesperson._id, salesperson.id, fromDate, toDate]);
+
+    useEffect(() => { setLoading(true); fetchReport(); }, [fetchReport]);
+    const onRefresh = () => { setRefreshing(true); fetchReport(); };
+
+    const summary = data?.summary || {};
+    const calls = data?.calls || [];
+
+    const handleExportPDF = async () => {
+        if (!calls.length) { Alert.alert('No Data', 'No calls found for the selected date range.'); return; }
+        setExporting(true);
+        try {
+            const logRows = calls.slice(0, 30).map(c => {
+                const sc = c.callStatus === 'Connected' ? '#22c55e' : c.callStatus === 'Missed' ? '#ef4444' : '#f59e0b';
+                return `<tr><td>${fmtDateTime(c.calledAt)}</td><td>${c.customerName || 'Unknown'}</td><td>${c.customerNumber || '—'}</td><td>${c.callType || '—'}</td><td style="color:${sc};font-weight:600">${c.callStatus || '—'}</td><td>${fmtDuration(c.durationSeconds)}</td><td>${c.disposition || '—'}</td></tr>`;
+            }).join('');
+            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>body{font-family:Arial,sans-serif;color:#1e293b;padding:24px}.hdr{background:#0f172a;color:#fff;padding:20px;border-radius:8px;margin-bottom:20px}h1{font-size:22px;margin:0}p{font-size:13px;color:#94a3b8;margin:4px 0 0}.cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}.card{background:#f8fafc;border-radius:8px;padding:14px;flex:1;min-width:110px;border-top:3px solid #6366f1}.val{font-size:24px;font-weight:800}.lbl{font-size:11px;color:#64748b;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#0f172a;color:#fff;padding:8px 10px;text-align:left}td{padding:7px 10px;border-bottom:1px solid #f1f5f9}tr:nth-child(even){background:#f8fafc}</style></head><body>
+            <div class="hdr"><h1>📊 ${salesperson.name} — Call Report</h1><p>${fromDate} → ${toDate} • Generated ${new Date().toLocaleDateString('en-IN')}</p></div>
+            <div class="cards">
+                <div class="card"><div class="val" style="color:#3B82F6">${summary.total ?? 0}</div><div class="lbl">Total Calls</div></div>
+                <div class="card"><div class="val" style="color:#10B981">${summary.connected ?? 0}</div><div class="lbl">Connected</div></div>
+                <div class="card"><div class="val" style="color:#F43F5E">${summary.notConnected ?? 0}</div><div class="lbl">Not Connected</div></div>
+                <div class="card"><div class="val" style="color:#8B5CF6">${summary.connectRate ?? 0}%</div><div class="lbl">Connect Rate</div></div>
+            </div>
+            ${calls.length > 0 ? `<table><tr><th>Date</th><th>Customer</th><th>Phone</th><th>Type</th><th>Status</th><th>Duration</th><th>Disp.</th></tr>${logRows}</table>` : ''}
+            </body></html>`;
+            const { uri } = await Print.printToFileAsync({ html, base64: false });
+            const canShare = await Sharing.isAvailableAsync();
+            if (canShare) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `${salesperson.name} Report`, UTI: 'com.adobe.pdf' });
+            else Alert.alert('Saved!', `PDF saved at:\n${uri}`);
+        } catch {
+            Alert.alert('Error', 'Could not export PDF. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    if (loading && !refreshing) return <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /><Text style={styles.loadingText}>Loading report...</Text></View>;
+
+    return (
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />} showsVerticalScrollIndicator={false}>
+            <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+            <View style={styles.header}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <TouchableOpacity onPress={onBack} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>←</Text>
+                    </TouchableOpacity>
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#10B98130', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>{(salesperson.name || 'S').charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <View>
+                        <Text style={styles.title}>{salesperson.name}</Text>
+                        <Text style={styles.subtitle}>{salesperson.email || 'Salesperson Report'}</Text>
+                    </View>
+                </View>
+            </View>
+
+            <View style={{ paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
+                <View style={styles.card}>
+                    <Text style={styles.cardLabel}>DATE RANGE  •  Default: Today</Text>
+                    <View style={styles.dateRow}>
+                        <View style={{ flex: 1 }}><Text style={styles.dateLabel}>FROM</Text><TextInput style={styles.dateInput} value={fromDate} onChangeText={setFromDate} placeholder="YYYY-MM-DD" placeholderTextColor="#94a3b8" /></View>
+                        <Text style={{ color: '#64748b', marginTop: 22, marginHorizontal: 8 }}>→</Text>
+                        <View style={{ flex: 1 }}><Text style={styles.dateLabel}>TO</Text><TextInput style={styles.dateInput} value={toDate} onChangeText={setToDate} placeholder="YYYY-MM-DD" placeholderTextColor="#94a3b8" /></View>
+                    </View>
+                </View>
+
+                <View style={styles.exportRow}>
+                    <TouchableOpacity style={[styles.exportBtn, { backgroundColor: '#3B82F6' }]} onPress={() => { setLoading(true); fetchReport(); }} activeOpacity={0.85}>
+                        <Text style={styles.exportBtnIcon}>🔍</Text><Text style={styles.exportBtnText}>Apply Filter</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.exportBtn, { backgroundColor: '#ef4444', opacity: exporting ? 0.6 : 1 }]} onPress={handleExportPDF} disabled={exporting} activeOpacity={0.85}>
+                        {exporting ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} /> : <Text style={styles.exportBtnIcon}>📄</Text>}
+                        <Text style={styles.exportBtnText}>{exporting ? 'Exporting...' : 'Export PDF'}</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>⚠️  {error}</Text><TouchableOpacity onPress={fetchReport} style={styles.retryBtn}><Text style={styles.retryText}>Retry →</Text></TouchableOpacity></View>}
+
+                {loading ? <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /></View> : (
+                    <>
+                        <View style={styles.statsGrid}>
+                            {[
+                                { label: 'Total Calls', value: summary.total ?? 0, color: '#3B82F6', icon: '📞' },
+                                { label: 'Connected', value: summary.connected ?? 0, color: '#10B981', icon: '✅' },
+                                { label: 'Not Connected', value: summary.notConnected ?? 0, color: '#F43F5E', icon: '❌' },
+                                { label: 'Total Duration', value: summary.totalDuration || '0s', color: '#8B5CF6', icon: '⏱' },
+                            ].map((card, i) => (
+                                <View key={i} style={[styles.statCard, { borderTopColor: card.color }]}>
+                                    <Text style={styles.statIcon}>{card.icon}</Text>
+                                    <Text style={[styles.statValue, { color: card.color }]}>{String(card.value)}</Text>
+                                    <Text style={styles.statLabel}>{card.label}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Connection Rate</Text>
+                            <DonutRate rate={summary.connectRate ?? 0} />
+                            <View style={{ gap: 6, marginTop: 8 }}>
+                                {[['Connected', summary.connected ?? 0, '#10B981'], ['Missed', summary.missed ?? 0, '#F43F5E'], ['Rejected', summary.rejected ?? 0, '#F59E0B']].map(([label, value, color]) => (
+                                    <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                        <Text style={{ color: '#64748b', fontSize: 13 }}>{label}</Text>
+                                        <Text style={{ fontWeight: '600', color, fontSize: 13 }}>{value}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Duration Summary</Text>
+                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                <View style={{ flex: 1, backgroundColor: '#F5F3FF', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 20, fontWeight: '800', color: '#7C3AED' }}>{summary.totalDuration || '0s'}</Text>
+                                    <Text style={{ fontSize: 11, color: '#8B5CF6', marginTop: 4 }}>Total Talk Time</Text>
+                                </View>
+                                <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 20, fontWeight: '800', color: '#2563EB' }}>{summary.avgDuration || '0s'}</Text>
+                                    <Text style={{ fontSize: 11, color: '#3B82F6', marginTop: 4 }}>Avg per Call</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {calls.length === 0 ? (
+                            <View style={styles.emptyBox}>
+                                <Text style={styles.emptyIcon}>📊</Text><Text style={styles.emptyTitle}>No Calls Found</Text><Text style={styles.emptyText}>No call logs for the selected date range.</Text>
+                            </View>
+                        ) : (
+                            <View style={[styles.card, { paddingHorizontal: 0 }]}>
+                                <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}><Text style={styles.sectionTitle}>Call List ({calls.length})</Text></View>
+                                <View style={[tableStyles.header, { backgroundColor: '#0f172a' }]}>
+                                    <Text style={[tableStyles.th, { flex: 1.4 }]}>Date & Time</Text>
+                                    <Text style={[tableStyles.th, { flex: 1.2 }]}>Customer</Text>
+                                    <Text style={tableStyles.th}>Type</Text>
+                                    <Text style={tableStyles.th}>Status</Text>
+                                    <Text style={tableStyles.th}>Duration</Text>
+                                </View>
+                                {calls.map((call, i) => (
+                                    <View key={call._id || i} style={[tableStyles.row, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}>
+                                        <View style={{ flex: 1.4, paddingRight: 4 }}><Text style={{ fontSize: 10, color: '#64748b' }} numberOfLines={2}>{fmtDateTime(call.calledAt)}</Text></View>
+                                        <View style={{ flex: 1.2, paddingRight: 4 }}>
+                                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#1e293b' }} numberOfLines={1}>{call.customerName || 'Unknown'}</Text>
+                                            <Text style={{ fontSize: 10, color: '#94a3b8' }} numberOfLines={1}>{call.customerNumber}</Text>
+                                        </View>
+                                        <View style={{ flex: 1, alignItems: 'center' }}>
+                                            <Text style={{ fontSize: 10, fontWeight: '600', color: call.callType === 'Outgoing' ? '#3B82F6' : '#8B5CF6' }}>{call.callType === 'Outgoing' ? '↑ Out' : '↓ In'}</Text>
+                                        </View>
+                                        <View style={{ flex: 1, alignItems: 'center' }}><StatusBadge status={call.callStatus} /></View>
+                                        <View style={{ flex: 1, alignItems: 'center' }}><Text style={{ fontSize: 12, color: '#64748b', fontWeight: '500' }}>{fmtDuration(call.durationSeconds)}</Text></View>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </>
+                )}
+            </View>
+            <View style={{ height: 40 }} />
+        </ScrollView>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BUSINESS USER — SALESPERSON LIST
+//  API: GET /api/reports/my-salespersons
+//  Response: array or { salespersons: [...] }
+// ══════════════════════════════════════════════════════════════
+function BusinessReport() {
+    const [salespersons, setSalespersons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
-    const [exporting, setExporting] = useState(false);
-    const [hourlyData, setHourlyData] = useState([]);
-    const [peakHour, setPeakHour] = useState(null);
-    const [agentReports, setAgentReports] = useState([]);
+    const [selected, setSelected] = useState(null);
 
-    const fetchData = useCallback(async () => {
+    const fetchSalespersons = useCallback(async () => {
         setError('');
         try {
-            const { dateFrom, dateTo } = getDateRange(period);
+            const res = await api.getMySalespersons();
+            const list = Array.isArray(res) ? res : (res?.salespersons || res?.data || []);
+            setSalespersons(list);
+        } catch {
+            setError('Cannot connect to server. Please try again.');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
 
-            const [logsRes, hourlyRes, teamRes] = await Promise.allSettled([
-                api.getCallLogs({ dateFrom, dateTo, limit: 500, sortField: 'calledAt', sortDir: 'asc' }),
-                api.getHourlyReport(new Date().toISOString().split('T')[0]),   // ← ADD: aaj ka hourly
-                api.getTeamCallStats(),
-            ]);
+    useEffect(() => { fetchSalespersons(); }, [fetchSalespersons]);
+    const onRefresh = () => { setRefreshing(true); fetchSalespersons(); };
 
-            // Logs
-            if (logsRes.status === 'fulfilled') {
-                const r = logsRes.value;
-                setLogs(r?.logs || (Array.isArray(r) ? r : []));
-            }
+    if (selected) return <BusinessSalespersonDetail salesperson={selected} onBack={() => setSelected(null)} />;
 
-            // Hourly
-            if (hourlyRes.status === 'fulfilled') {
-                const h = hourlyRes.value;
-                setHourlyData(h?.workHours || []);
-                setPeakHour(h?.peakHour || null);
-            }
+    if (loading && !refreshing) return <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /><Text style={styles.loadingText}>Loading team...</Text></View>;
 
-            // Team/Agent report
-            if (teamRes.status === 'fulfilled') {
-                const t = teamRes.value;
-                setAgentReports(t?.agents || []);
-            }
-        } catch (e) {
-            setError('Server se connect nahi ho pa raha');
+    return (
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />} showsVerticalScrollIndicator={false}>
+            <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+            <View style={styles.header}>
+                <View><Text style={styles.title}>Team Reports</Text><Text style={styles.subtitle}>Tap a salesperson to view their report</Text></View>
+                <View style={styles.headerIcon}><Text style={styles.headerIconText}>👥</Text></View>
+            </View>
+
+            <View style={{ paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
+                {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>⚠️  {error}</Text><TouchableOpacity onPress={fetchSalespersons} style={styles.retryBtn}><Text style={styles.retryText}>Retry →</Text></TouchableOpacity></View>}
+
+                {salespersons.length === 0 && !error && (
+                    <View style={styles.emptyBox}>
+                        <Text style={styles.emptyIcon}>👥</Text><Text style={styles.emptyTitle}>No Salespersons</Text><Text style={styles.emptyText}>No salespersons found under your account.</Text>
+                    </View>
+                )}
+
+                {salespersons.map((sp, i) => {
+                    const rate = sp.totalCalls > 0 ? Math.round(((sp.connectedCalls || 0) / sp.totalCalls) * 100) : 0;
+                    const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F43F5E', '#F59E0B', '#06B6D4'];
+                    const avatarColor = COLORS[(sp.name?.charCodeAt(0) || i) % COLORS.length];
+                    return (
+                        <TouchableOpacity
+                            key={sp._id || sp.id || i}
+                            style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 }]}
+                            onPress={() => setSelected({ _id: sp._id || sp.id, id: sp._id || sp.id, name: sp.name, email: sp.email })}
+                            activeOpacity={0.75}
+                        >
+                            <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: avatarColor + '25', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: avatarColor + '60' }}>
+                                <Text style={{ fontSize: 18, fontWeight: '800', color: avatarColor }}>{(sp.name || 'S').charAt(0).toUpperCase()}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1e293b' }}>{sp.name}</Text>
+                                <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{sp.email || ''}</Text>
+                                <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
+                                    <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600' }}>📞 {sp.totalCalls || 0}</Text>
+                                    <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '600' }}>✅ {sp.connectedCalls || 0}</Text>
+                                    <Text style={{ fontSize: 11, color: rate >= 50 ? '#10B981' : '#F43F5E', fontWeight: '700' }}>{rate}%</Text>
+                                </View>
+                            </View>
+                            <Text style={{ color: '#94a3b8', fontSize: 20 }}>›</Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+            <View style={{ height: 40 }} />
+        </ScrollView>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SUPER ADMIN — GENERIC REPORT
+//  API: GET /api/reports/summary?period=today|week|month
+//  Response: { total, connected, missed, connectRate }
+// ══════════════════════════════════════════════════════════════
+function GenericReport() {
+    const PERIODS = [
+        { key: 'today', label: 'Today', icon: '📅' },
+        { key: 'week', label: 'This Week', icon: '📆' },
+        { key: 'month', label: 'This Month', icon: '📊' },
+    ];
+
+    const [period, setPeriod] = useState('today');
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [stats, setStats] = useState(null);
+    const [error, setError] = useState('');
+
+    const fetchReports = useCallback(async () => {
+        setError('');
+        try {
+            const res = await api.getReports(period);
+            setStats(res);
+        } catch {
+            setError('Cannot connect to server. Please try again.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, [period]);
 
-    useEffect(() => { setLoading(true); fetchData(); }, [fetchData]);
-    const onRefresh = () => { setRefreshing(true); fetchData(); };
+    useEffect(() => { setLoading(true); fetchReports(); }, [fetchReports]);
+    const onRefresh = () => { setRefreshing(true); fetchReports(); };
 
-    // ── Computed ──────────────────────────────────────────────
-    const total = logs.length;
-    const connected = logs.filter(l => l.callStatus === 'Connected').length;
-    const missed = logs.filter(l => l.callStatus === 'Missed').length;
-    const rejected = logs.filter(l => l.callStatus === 'Rejected').length;
-    const outgoing = logs.filter(l => l.callType === 'Outgoing').length;
-    const incoming = logs.filter(l => l.callType === 'Incoming').length;
-    const connRate = total ? Math.round((connected / total) * 100) : 0;
-    const totalDur = logs.reduce((s, l) => s + (l.durationSeconds || 0), 0);
-    const avgDur = total ? Math.round(totalDur / total) : 0;
+    const totalCalls = stats?.total ?? 0;
+    const connected = stats?.connected ?? 0;
+    const missed = stats?.missed ?? 0;
+    const connectRate = stats?.connectRate ?? 0;
 
-    const dispositions = {};
-    logs.forEach(l => { if (l.disposition) dispositions[l.disposition] = (dispositions[l.disposition] || 0) + 1; });
-    const dispEntries = Object.entries(dispositions).sort((a, b) => b[1] - a[1]);
-
-    const allBuckets = buildDailyBuckets(logs, period);
-    const step = period === 'quarter' ? 7 : period === 'month' ? 3 : 1;
-    const chartBuckets = allBuckets.filter((_, i, arr) => i % step === 0 || i === arr.length - 1);
-    const maxBucket = Math.max(...allBuckets.map(b => b.total), 1);
-
-    const summaryCards = [
-        { title: 'Total Calls', value: String(total), color: '#6366f1', icon: '📞' },
-        { title: 'Connected', value: String(connected), color: '#22c55e', icon: '✅' },
-        { title: 'Missed', value: String(missed), color: '#ef4444', icon: '❌' },
-        { title: 'Connect Rate', value: `${connRate}%`, color: '#3b82f6', icon: '📈' },
-        { title: 'Avg Duration', value: fmtDuration(avgDur), color: '#8b5cf6', icon: '⏱' },
-        { title: 'Total Duration', value: fmtDuration(totalDur), color: '#f59e0b', icon: '🕐' },
-    ];
-
-    const periodLabel = PERIODS.find(p => p.key === period)?.label || '';
-    const { dateFrom, dateTo } = getDateRange(period);
-
-    // ── Export PDF ────────────────────────────────────────────
-    const handleExportPDF = async () => {
-        if (total === 0) { Alert.alert('No Data', 'Is period mein koi data nahi hai export karne ke liye.'); return; }
-        setExporting(true);
-        try {
-            const html = generatePdfHtml({ periodLabel, total, connected, missed, rejected, outgoing, incoming, connRate, avgDur, totalDur, dispEntries, logs, dateFrom, dateTo });
-            const { uri } = await Print.printToFileAsync({ html, base64: false });
-            const canShare = await Sharing.isAvailableAsync();
-            if (canShare) {
-                await Sharing.shareAsync(uri, {
-                    mimeType: 'application/pdf',
-                    dialogTitle: `Report — ${periodLabel}`,
-                    UTI: 'com.adobe.pdf',
-                });
-            } else {
-                Alert.alert('Saved!', `PDF saved at:\n${uri}`);
-            }
-        } catch (e) {
-            Alert.alert('Error', 'PDF export nahi ho paya. Dobara try karo.');
-        } finally {
-            setExporting(false);
-        }
-    };
-
-    // ── Download = same as Export (share sheet se save hoga) ──
-    const handleDownload = handleExportPDF;
-
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#6366f1" />
-                <Text style={styles.loadingText}>Loading reports...</Text>
-            </View>
-        );
-    }
+    if (loading && !refreshing) return <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /><Text style={styles.loadingText}>Loading reports...</Text></View>;
 
     return (
-        <ScrollView
-            style={styles.container}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
-            showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />} showsVerticalScrollIndicator={false}>
             <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-
-            {/* Header */}
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>Reports & Analytics</Text>
-                    <Text style={styles.subtitle}>Track your call performance metrics</Text>
-                </View>
-                <View style={styles.headerIcon}>
-                    <Text style={styles.headerIconText}>📊</Text>
-                </View>
+                <View><Text style={styles.title}>Reports & Analytics</Text><Text style={styles.subtitle}>System-wide performance insights</Text></View>
+                <View style={styles.headerIcon}><Text style={styles.headerIconText}>📊</Text></View>
             </View>
 
-            {/* Period Selector */}
-            <View style={[styles.card, { marginTop: 16 }]}>
-                <Text style={styles.cardLabel}>SELECT PERIOD</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                    {PERIODS.map(p => (
-                        <TouchableOpacity
-                            key={p.key}
-                            style={[styles.periodBtn, period === p.key && styles.periodBtnActive]}
-                            onPress={() => setPeriod(p.key)}
-                        >
-                            <Text style={styles.periodIcon}>{p.icon}</Text>
-                            <Text style={[styles.periodBtnText, period === p.key && styles.periodBtnTextActive]}>{p.label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-
-            {/* ── Export / Download Buttons ── */}
-            <View style={styles.exportRow}>
-                <TouchableOpacity
-                    style={[styles.exportBtn, styles.exportBtnRed, exporting && styles.btnDisabled]}
-                    onPress={handleExportPDF}
-                    disabled={exporting}
-                    activeOpacity={0.85}
-                >
-                    {exporting
-                        ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                        : <Text style={styles.exportBtnIcon}>📄</Text>
-                    }
-                    <Text style={styles.exportBtnText}>{exporting ? 'Generating...' : 'Export PDF'}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.exportBtn, styles.exportBtnBlue, exporting && styles.btnDisabled]}
-                    onPress={handleDownload}
-                    disabled={exporting}
-                    activeOpacity={0.85}
-                >
-                    <Text style={styles.exportBtnIcon}>⬇</Text>
-                    <Text style={styles.exportBtnText}>Download Report</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Error */}
-            {!!error && (
-                <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>⚠️  {error}</Text>
-                    <TouchableOpacity onPress={fetchData} style={styles.retryBtn}>
-                        <Text style={styles.retryText}>Retry →</Text>
-                    </TouchableOpacity>
+            <View style={{ paddingHorizontal: 16, marginTop: 16, gap: 14 }}>
+                <View style={styles.card}>
+                    <Text style={styles.cardLabel}>SELECT PERIOD</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                        {PERIODS.map(p => (
+                            <TouchableOpacity key={p.key} style={[styles.periodBtn, period === p.key && styles.periodBtnActive]} onPress={() => setPeriod(p.key)}>
+                                <Text style={styles.periodIcon}>{p.icon}</Text>
+                                <Text style={[styles.periodBtnText, period === p.key && styles.periodBtnTextActive]}>{p.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </View>
-            )}
 
-            {/* Empty */}
-            {!error && total === 0 && (
-                <View style={styles.emptyBox}>
-                    <Text style={styles.emptyIcon}>📊</Text>
-                    <Text style={styles.emptyTitle}>No Calls Found</Text>
-                    <Text style={styles.emptyText}>"{periodLabel}" mein koi call log nahi hai</Text>
-                    <Text style={styles.emptySubText}>Alag period select karo ya pehle calls add karo</Text>
-                </View>
-            )}
+                {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>⚠️  {error}</Text><TouchableOpacity onPress={fetchReports} style={styles.retryBtn}><Text style={styles.retryText}>Retry →</Text></TouchableOpacity></View>}
 
-            {total > 0 && (
-                <>
-                    {/* Summary Cards */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <View style={styles.sectionBar} />
-                            <Text style={styles.sectionTitle}>Key Metrics — {periodLabel}</Text>
-                        </View>
-                        <View style={styles.summaryGrid}>
-                            {summaryCards.map((card, i) => (
-                                <View key={i} style={[styles.summaryCard, { borderTopColor: card.color }]}>
-                                    <Text style={styles.summaryIcon}>{card.icon}</Text>
-                                    <Text style={[styles.summaryValue, { color: card.color }]}>{card.value}</Text>
-                                    <Text style={styles.summaryLabel}>{card.title}</Text>
-                                </View>
-                            ))}
-                        </View>
+                {loading ? <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /></View> : (
+                    <View style={styles.statsGrid}>
+                        {[
+                            { label: 'Total Calls', value: totalCalls, color: '#3B82F6', icon: '📞' },
+                            { label: 'Connected', value: connected, color: '#10B981', icon: '✅' },
+                            { label: 'Missed', value: missed, color: '#F43F5E', icon: '❌' },
+                            { label: 'Connect Rate', value: `${connectRate}%`, color: '#8B5CF6', icon: '📈' },
+                        ].map((card, i) => (
+                            <View key={i} style={[styles.statCard, { borderTopColor: card.color }]}>
+                                <Text style={styles.statIcon}>{card.icon}</Text>
+                                <Text style={[styles.statValue, { color: card.color }]}>{String(card.value)}</Text>
+                                <Text style={styles.statLabel}>{card.label}</Text>
+                            </View>
+                        ))}
                     </View>
-
-                    {/* Call Type Split */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <View style={styles.sectionBar} />
-                            <Text style={styles.sectionTitle}>Call Type Split</Text>
-                        </View>
-                        <View style={[styles.card, { gap: 12 }]}>
-                            {[
-                                { label: 'Outgoing', value: outgoing, color: '#6366f1' },
-                                { label: 'Incoming', value: incoming, color: '#3b82f6' },
-                            ].map(item => (
-                                <View key={item.label} style={styles.distRow}>
-                                    <View style={[styles.distDot, { backgroundColor: item.color }]} />
-                                    <Text style={styles.distLabel}>{item.label}</Text>
-                                    <MiniBar value={item.value} max={total} color={item.color} />
-                                    <Text style={styles.distValue}>{item.value}</Text>
-                                    <Text style={styles.distPct}>{total ? Math.round((item.value / total) * 100) : 0}%</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-
-                    {/* Call Status Distribution */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <View style={styles.sectionBar} />
-                            <Text style={styles.sectionTitle}>Call Status Distribution</Text>
-                        </View>
-                        <View style={[styles.card, { gap: 12 }]}>
-                            {[
-                                { label: 'Connected', value: connected, color: '#22c55e' },
-                                { label: 'Missed', value: missed, color: '#ef4444' },
-                                { label: 'Rejected', value: rejected, color: '#f59e0b' },
-                            ].map(item => (
-                                <View key={item.label} style={styles.distRow}>
-                                    <View style={[styles.distDot, { backgroundColor: item.color }]} />
-                                    <Text style={styles.distLabel}>{item.label}</Text>
-                                    <MiniBar value={item.value} max={total} color={item.color} />
-                                    <Text style={styles.distValue}>{item.value}</Text>
-                                    <Text style={styles.distPct}>{total ? Math.round((item.value / total) * 100) : 0}%</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-
-                    {/* Daily Trend */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}>
-                            <View style={styles.sectionBar} />
-                            <Text style={styles.sectionTitle}>Daily Trend</Text>
-                        </View>
-                        <View style={styles.card}>
-                            <View style={styles.legendRow}>
-                                {[['Connected', '#22c55e'], ['Missed', '#ef4444'], ['Rejected', '#f59e0b']].map(([l, c]) => (
-                                    <View key={l} style={styles.legendItem}>
-                                        <View style={[styles.legendDot, { backgroundColor: c }]} />
-                                        <Text style={styles.legendText}>{l}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={styles.barChart}>
-                                    {chartBuckets.map((b, i) => {
-                                        const barH = 100;
-                                        const connH = Math.round((b.connected / maxBucket) * barH);
-                                        const missH = Math.round((b.missed / maxBucket) * barH);
-                                        const rejH = Math.round((b.rejected / maxBucket) * barH);
-                                        const label = period === 'today' ? 'Today' :
-                                            period === 'week' ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][new Date(b.date).getDay()] :
-                                                b.date.slice(5);
-                                        return (
-                                            <View key={i} style={styles.barCol}>
-                                                <Text style={styles.barTopVal}>{b.total || ''}</Text>
-                                                <View style={{ height: barH, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-                                                    {connH > 0 && <View style={{ width: 8, height: connH, backgroundColor: '#22c55e', borderRadius: 3 }} />}
-                                                    {missH > 0 && <View style={{ width: 8, height: missH, backgroundColor: '#ef4444', borderRadius: 3 }} />}
-                                                    {rejH > 0 && <View style={{ width: 8, height: rejH, backgroundColor: '#f59e0b', borderRadius: 3 }} />}
-                                                    {b.total === 0 && <View style={{ width: 8, height: 4, backgroundColor: '#e2e8f0', borderRadius: 3 }} />}
-                                                </View>
-                                                <Text style={styles.barXLabel}>{label}</Text>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                            </ScrollView>
-                        </View>
-                    </View>
-
-                    {/* Disposition Breakdown */}
-                    {dispEntries.length > 0 && (
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <View style={styles.sectionBar} />
-                                <Text style={styles.sectionTitle}>Disposition Breakdown</Text>
-                            </View>
-                            <View style={[styles.card, { gap: 12 }]}>
-                                {dispEntries.map(([label, count], i) => {
-                                    const cols = ['#6366f1', '#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4'];
-                                    const color = cols[i % cols.length];
-                                    return (
-                                        <View key={label} style={styles.distRow}>
-                                            <View style={[styles.distDot, { backgroundColor: color }]} />
-                                            <Text style={styles.distLabel}>{label}</Text>
-                                            <MiniBar value={count} max={total} color={color} />
-                                            <Text style={styles.distValue}>{count}</Text>
-                                            <Text style={styles.distPct}>{Math.round((count / total) * 100)}%</Text>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </View>
-                    )}
-
-                    {/* ── Hourly Breakdown ───────────────── */}
-                    {hourlyData.length > 0 && (
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <View style={styles.sectionBar} />
-                                <Text style={styles.sectionTitle}>Today's Hourly Breakdown</Text>
-                            </View>
-
-                            {/* Peak Hour Banner */}
-                            {peakHour && peakHour.total > 0 && (
-                                <View style={hourlyStyles.peakBanner}>
-                                    <Text style={hourlyStyles.peakIcon}>🔥</Text>
-                                    <View>
-                                        <Text style={hourlyStyles.peakTitle}>
-                                            Peak Hour: {peakHour.label}
-                                        </Text>
-                                        <Text style={hourlyStyles.peakSub}>
-                                            {peakHour.total} calls · {peakHour.connected} connected
-                                        </Text>
-                                    </View>
-                                </View>
-                            )}
-
-                            {/* Hourly Bar Chart */}
-                            <View style={styles.card}>
-                                <View style={styles.legendRow}>
-                                    {[['Connected', '#22c55e'], ['Missed', '#ef4444'], ['Rejected', '#f59e0b']].map(([l, c]) => (
-                                        <View key={l} style={styles.legendItem}>
-                                            <View style={[styles.legendDot, { backgroundColor: c }]} />
-                                            <Text style={styles.legendText}>{l}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    <View style={styles.barChart}>
-                                        {hourlyData.map((h, i) => {
-                                            const maxH = Math.max(...hourlyData.map(x => x.total), 1);
-                                            const BAR = 90;
-                                            const connH  = Math.round((h.connected / maxH) * BAR);
-                                            const missH  = Math.round((h.missed    / maxH) * BAR);
-                                            const rejH   = Math.round((h.rejected  / maxH) * BAR);
-                                            const isPeak = peakHour && peakHour.hour === h.hour && h.total > 0;
-                                            return (
-                                                <View key={i} style={styles.barCol}>
-                                                    <Text style={[styles.barTopVal, isPeak && { color: '#f59e0b', fontWeight: '800' }]}>
-                                                        {h.total || ''}
-                                                    </Text>
-                                                    <View style={{ height: BAR, justifyContent: 'flex-end', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-                                                        {connH > 0 && <View style={{ width: 8, height: connH, backgroundColor: '#22c55e', borderRadius: 3 }} />}
-                                                        {missH > 0 && <View style={{ width: 8, height: missH, backgroundColor: '#ef4444', borderRadius: 3 }} />}
-                                                        {rejH  > 0 && <View style={{ width: 8, height: rejH,  backgroundColor: '#f59e0b', borderRadius: 3 }} />}
-                                                        {h.total === 0 && <View style={{ width: 8, height: 3, backgroundColor: '#e2e8f0', borderRadius: 3 }} />}
-                                                    </View>
-                                                    <Text style={[styles.barXLabel, isPeak && { color: '#f59e0b' }]}>
-                                                        {h.label}
-                                                    </Text>
-                                                </View>
-                                            );
-                                        })}
-                                    </View>
-                                </ScrollView>
-                            </View>
-
-                            {/* Hourly Table */}
-                            <View style={[styles.card, { marginTop: 10, paddingHorizontal: 0, overflow: 'hidden' }]}>
-                                {/* Header row */}
-                                <View style={hourlyStyles.tableHeader}>
-                                    <Text style={[hourlyStyles.th, { flex: 1.2 }]}>Hour</Text>
-                                    <Text style={hourlyStyles.th}>Total</Text>
-                                    <Text style={hourlyStyles.th}>✅</Text>
-                                    <Text style={hourlyStyles.th}>❌</Text>
-                                    <Text style={hourlyStyles.th}>Rate</Text>
-                                </View>
-                                {hourlyData.filter(h => h.total > 0).map((h, i) => {
-                                    const rate = h.total > 0 ? Math.round((h.connected / h.total) * 100) : 0;
-                                    const isPeak = peakHour && peakHour.hour === h.hour;
-                                    return (
-                                        <View
-                                            key={i}
-                                            style={[
-                                                hourlyStyles.tableRow,
-                                                i % 2 === 0 && { backgroundColor: '#f8fafc' },
-                                                isPeak && { backgroundColor: '#fffbeb' },
-                                            ]}
-                                        >
-                                            <View style={[hourlyStyles.td, { flex: 1.2, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-                                                {isPeak && <Text style={{ fontSize: 12 }}>🔥</Text>}
-                                                <Text style={[hourlyStyles.tdText, { fontWeight: isPeak ? '800' : '600' }]}>
-                                                    {h.label}
-                                                </Text>
-                                            </View>
-                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { fontWeight: '700' }]}>{h.total}</Text>
-                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: '#22c55e' }]}>{h.connected}</Text>
-                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: '#ef4444' }]}>{h.missed}</Text>
-                                            <Text style={[hourlyStyles.tdText, hourlyStyles.td, { color: rate >= 50 ? '#22c55e' : '#ef4444', fontWeight: '700' }]}>
-                                                {rate}%
-                                            </Text>
-                                        </View>
-                                    );
-                                })}
-                                {hourlyData.every(h => h.total === 0) && (
-                                    <Text style={hourlyStyles.noData}>No calls recorded today</Text>
-                                )}
-                            </View>
-                        </View>
-                    )}
-                    {/* ── Per Salesperson Report ─────────────── */}
-                    {agentReports.length > 0 && (
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <View style={styles.sectionBar} />
-                                <Text style={styles.sectionTitle}>Today's Team Performance</Text>
-                            </View>
-                            <View style={[styles.card, { paddingHorizontal: 0, overflow: 'hidden' }]}>
-                                {/* Table Header */}
-                                <View style={agentStyles.tableHead}>
-                                    <Text style={[agentStyles.th, { flex: 2 }]}>Salesperson</Text>
-                                    <Text style={agentStyles.th}>Calls</Text>
-                                    <Text style={agentStyles.th}>✅</Text>
-                                    <Text style={agentStyles.th}>Rate</Text>
-                                </View>
-                                {agentReports.map((agent, i) => {
-                                    const rate = agent.totalCalls > 0
-                                        ? Math.round((agent.connectedCalls / agent.totalCalls) * 100) : 0;
-                                    return (
-                                        <View key={agent._id || i}
-                                            style={[agentStyles.row, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}>
-                                            <View style={[agentStyles.td, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                                                <View style={agentStyles.avatar}>
-                                                    <Text style={agentStyles.avatarText}>
-                                                        {(agent.name || 'S').charAt(0).toUpperCase()}
-                                                    </Text>
-                                                </View>
-                                                <Text style={agentStyles.agentName} numberOfLines={1}>{agent.name}</Text>
-                                            </View>
-                                            <Text style={[agentStyles.tdText, agentStyles.td, { fontWeight: '700' }]}>
-                                                {agent.totalCalls}
-                                            </Text>
-                                            <Text style={[agentStyles.tdText, agentStyles.td, { color: '#22c55e' }]}>
-                                                {agent.connectedCalls}
-                                            </Text>
-                                            <Text style={[agentStyles.tdText, agentStyles.td,
-                                                { color: rate >= 50 ? '#22c55e' : '#ef4444', fontWeight: '700' }]}>
-                                                {rate}%
-                                            </Text>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </View>
-                    )}
-                </>
-            )}
-
+                )}
+            </View>
             <View style={{ height: 40 }} />
         </ScrollView>
     );
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ROOT EXPORT — Role Router (matches website Reports.jsx)
+// ══════════════════════════════════════════════════════════════
+export default function ReportsScreen() {
+    const { user } = useContext(AuthContext);
+
+    if (!user) return <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /></View>;
+
+    if (user.role === 'salesperson') return <SalespersonReport user={user} />;
+    if (user.role === 'business_user') return <BusinessReport />;
+    if (user.role === 'super_admin') return <GenericReport />;
+    return <GenericReport />;
+}
+
+// ── Shared Styles ─────────────────────────────────────────────
 const barStyles = StyleSheet.create({
     bg: { flex: 1, height: 8, backgroundColor: '#f1f5f9', borderRadius: 6, marginHorizontal: 10, overflow: 'hidden' },
     fill: { height: 8, borderRadius: 6 },
 });
 
+const tableStyles = StyleSheet.create({
+    header: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 10 },
+    th: { flex: 1, color: '#fff', fontSize: 11, fontWeight: '700', textAlign: 'center' },
+    row: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', alignItems: 'center' },
+});
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f1f5f9' },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9' },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9', padding: 20, minHeight: 120 },
     loadingText: { color: '#64748b', marginTop: 12, fontSize: 14, fontWeight: '500' },
 
     header: {
@@ -687,38 +1512,29 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20, paddingTop: 56, paddingBottom: 24,
         backgroundColor: '#0f172a', borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
     },
-    title: { color: '#ffffff', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+    title: { color: '#ffffff', fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
     subtitle: { color: '#94a3b8', fontSize: 13, marginTop: 4 },
     headerIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#6366f120', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#6366f140' },
-    headerIconText: { fontSize: 24 },
+    headerIconText: { fontSize: 22 },
 
-    card: { backgroundColor: '#ffffff', marginHorizontal: 16, borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+    card: {
+        backgroundColor: '#ffffff', borderRadius: 16, padding: 14,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+    },
     cardLabel: { color: '#64748b', fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 10, textTransform: 'uppercase' },
+    sectionTitle: { color: '#1e293b', fontSize: 15, fontWeight: '700' },
 
-    periodBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
-    periodIcon: { fontSize: 14 },
-    periodBtnActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
-    periodBtnText: { color: '#64748b', fontSize: 13, fontWeight: '600' },
-    periodBtnTextActive: { color: '#ffffff' },
+    dateRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 4 },
+    dateLabel: { color: '#64748b', fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginBottom: 6, textTransform: 'uppercase' },
+    dateInput: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#1e293b', backgroundColor: '#f8fafc' },
 
-    // ── Export Buttons ──────────────────────────────────────
-    exportRow: {
-        flexDirection: 'row', gap: 12,
-        marginHorizontal: 16, marginTop: 14, marginBottom: 4,
-    },
-    exportBtn: {
-        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        paddingVertical: 14, borderRadius: 14, gap: 8,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
-    },
-    exportBtnRed: { backgroundColor: '#ef4444' },
-    exportBtnBlue: { backgroundColor: '#2563eb' },
+    exportRow: { flexDirection: 'row', gap: 12 },
+    exportBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 14, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4 },
     exportBtnIcon: { fontSize: 16 },
     exportBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
-    btnDisabled: { opacity: 0.6 },
 
-    errorBox: { backgroundColor: '#fef2f2', marginHorizontal: 16, marginTop: 16, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#fecaca', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    errorBox: { backgroundColor: '#fef2f2', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#fecaca', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     errorText: { color: '#dc2626', fontSize: 13, flex: 1 },
     retryBtn: { marginLeft: 12 },
     retryText: { color: '#dc2626', fontWeight: '700', fontSize: 13 },
@@ -726,86 +1542,17 @@ const styles = StyleSheet.create({
     emptyBox: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 40 },
     emptyIcon: { fontSize: 52, marginBottom: 16 },
     emptyTitle: { color: '#1e293b', fontSize: 18, fontWeight: '700', marginBottom: 8 },
-    emptyText: { color: '#64748b', fontSize: 14, textAlign: 'center', marginBottom: 4 },
-    emptySubText: { color: '#94a3b8', fontSize: 13, textAlign: 'center' },
+    emptyText: { color: '#64748b', fontSize: 14, textAlign: 'center' },
 
-    section: { marginTop: 20 },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10 },
-    sectionBar: { width: 4, height: 18, backgroundColor: '#6366f1', borderRadius: 2, marginRight: 10 },
-    sectionTitle: { color: '#1e293b', fontSize: 15, fontWeight: '700' },
+    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    statCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 14, width: (width - 42) / 2, borderTopWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+    statIcon: { fontSize: 20, marginBottom: 8 },
+    statValue: { fontSize: 26, fontWeight: '800', marginBottom: 4 },
+    statLabel: { color: '#64748b', fontSize: 12, fontWeight: '500' },
 
-    summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10 },
-    summaryCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 14, width: (width - 44) / 2, borderTopWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
-    summaryIcon: { fontSize: 20, marginBottom: 8 },
-    summaryValue: { fontSize: 26, fontWeight: '800', marginBottom: 4 },
-    summaryLabel: { color: '#64748b', fontSize: 12, fontWeight: '500' },
-
-    distRow: { flexDirection: 'row', alignItems: 'center' },
-    distDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-    distLabel: { color: '#1e293b', fontSize: 13, fontWeight: '600', width: 80 },
-    distValue: { color: '#64748b', fontSize: 13, width: 36, textAlign: 'right', fontWeight: '500' },
-    distPct: { color: '#94a3b8', fontSize: 12, width: 38, textAlign: 'right' },
-
-    legendRow: { flexDirection: 'row', gap: 16, marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    legendDot: { width: 9, height: 9, borderRadius: 5 },
-    legendText: { color: '#64748b', fontSize: 12, fontWeight: '500' },
-
-    barChart: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, paddingVertical: 4, paddingHorizontal: 4 },
-    barCol: { alignItems: 'center', minWidth: 36 },
-    barTopVal: { color: '#64748b', fontSize: 10, fontWeight: '600', marginBottom: 4, minHeight: 14 },
-    barXLabel: { color: '#94a3b8', fontSize: 10, marginTop: 6, fontWeight: '500' },
-});
-
-const hourlyStyles = StyleSheet.create({
-    peakBanner: {
-        flexDirection: 'row', alignItems: 'center', gap: 12,
-        backgroundColor: '#fffbeb', borderWidth: 1.5, borderColor: '#f59e0b',
-        borderRadius: 14, marginHorizontal: 16, marginBottom: 10, padding: 14,
-    },
-    peakIcon:  { fontSize: 28 },
-    peakTitle: { fontSize: 15, fontWeight: '800', color: '#92400E' },
-    peakSub:   { fontSize: 12, color: '#B45309', marginTop: 2 },
-
-    tableHeader: {
-        flexDirection: 'row', backgroundColor: '#0f172a',
-        paddingHorizontal: 16, paddingVertical: 10,
-    },
-    th: {
-        flex: 1, color: '#fff', fontSize: 12,
-        fontWeight: '700', textAlign: 'center',
-    },
-    tableRow: {
-        flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10,
-        borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-    },
-    td:     { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    tdText: { fontSize: 13, color: '#1e293b', textAlign: 'center' },
-    noData: {
-        textAlign: 'center', color: '#94a3b8',
-        fontSize: 13, padding: 20,
-    },
-});
-
-const agentStyles = StyleSheet.create({
-    tableHead: {
-        flexDirection: 'row', backgroundColor: '#0f172a',
-        paddingHorizontal: 14, paddingVertical: 10,
-    },
-    th: {
-        flex: 1, color: '#fff', fontSize: 12,
-        fontWeight: '700', textAlign: 'center',
-    },
-    row: {
-        flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 11,
-        borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-    },
-    td:       { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    tdText:   { fontSize: 13, color: '#1e293b', textAlign: 'center' },
-    avatar: {
-        width: 28, height: 28, borderRadius: 14,
-        backgroundColor: '#EBF0FF', justifyContent: 'center', alignItems: 'center',
-    },
-    avatarText:  { fontSize: 13, fontWeight: '700', color: '#4A68F0' },
-    agentName:   { fontSize: 13, fontWeight: '600', color: '#1e293b', flex: 1 },
+    periodBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
+    periodIcon: { fontSize: 14 },
+    periodBtnActive: { backgroundColor: '#6366f1', borderColor: '#6366f1' },
+    periodBtnText: { color: '#64748b', fontSize: 13, fontWeight: '600' },
+    periodBtnTextActive: { color: '#ffffff' },
 });

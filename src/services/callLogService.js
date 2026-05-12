@@ -628,6 +628,11 @@ export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
 
         const deviceLogs = await readDeviceCallLogs(200, daysBack);
 
+        console.log(`[DEBUG] Total device logs found: ${deviceLogs.length}`);
+        console.log(`[DEBUG] Last sync ts: ${lastSyncTs}`);
+        console.log(`[DEBUG] Days back: ${daysBack}`);
+        console.log(`[DEBUG] cutoff time: ${new Date(lastSyncTs)}`);
+
         if (!deviceLogs.length) {
             await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
             return { success: true, synced: 0, total: 0, message: 'No calls on device' };
@@ -637,6 +642,7 @@ export const syncCallLogsToBackend = async ({ silent = false } = {}) => {
             ? deviceLogs.filter(l => new Date(l.calledAt).getTime() > lastSyncTs)
             : deviceLogs;
 
+        console.log(`[DEBUG] newLogs after lastSync filter: ${newLogs.length}`);
         if (!newLogs.length) {
             await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
             return { success: true, synced: 0, total: deviceLogs.length, message: 'Already up to date' };

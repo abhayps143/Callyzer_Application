@@ -25,6 +25,8 @@ import BusinessDashboardScreen from '../screens/BusinessDashboardScreen';
 
 import MyTeamScreen from '../screens/MyTeamScreen';
 import SalespersonDashboardScreen from '../screens/SalespersonDashboardScreen';
+import BusinessLeadsScreen from '../screens/business/BusinessLeadsScreen';
+import SalespersonLeadsScreen from '../screens/salesperson/SalespersonLeadsScreen';
 
 import RegisterScreen from '../screens/RegisterScreen';
 import PendingScreen from '../screens/PendingScreen';
@@ -55,18 +57,19 @@ const MENUS = {
     ],
     business_user: [
         { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
-        { id: 'LiveFeed',          label: 'Live Feed', icon: '🔴' },
-        { id: 'MyTeam',            label: 'My Team',     icon: '👥' },  
-        { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' },
-        
+        { id: 'LiveFeed',          label: 'Live Feed',   icon: '🔴' },
+        { id: 'MyTeam',            label: 'My Team',     icon: '👥' },
+        { id: 'BusinessLeads',     label: 'Leads',       icon: '🎯' },  
+        { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' }, 
         { id: 'DeviceCallSync',    label: 'Device Sync', icon: '📲' },
         { id: 'Reports',           label: 'Reports',     icon: '📊' },
         { id: 'Leaderboard',       label: 'Leaderboard', icon: '🏆' },
     ],
     salesperson: [
-        { id: 'SalespersonDashboard', label: 'Dashboard',   icon: '🏠' },  
+        { id: 'SalespersonDashboard', label: 'Dashboard',   icon: '🏠' },
+        { id: 'SalespersonLeads',     label: 'My Leads',    icon: '🎯' },  
         { id: 'CallLogs',             label: 'Call Logs',   icon: '📞' },
-        { id: 'CallHistory',          label: 'My History', icon: '🕑' },
+        { id: 'CallHistory',          label: 'My History',  icon: '🕑' },
         { id: 'DeviceCallSync',       label: 'Sync Calls',  icon: '📲' },
         { id: 'Reports',              label: 'Reports',     icon: '📊' },
         { id: 'Leaderboard',          label: 'Leaderboard', icon: '🏆' },
@@ -292,6 +295,8 @@ function SalespersonStack() {
         >
             <Stack.Screen name="SalespersonDashboard" component={SalespersonDashboardScreen}
                 options={makeHeaderOptions('Dashboard', userRef, logoutRef, currentRouteRef)} />
+            <Stack.Screen name="SalespersonLeads" component={SalespersonLeadsScreen}
+                options={makeHeaderOptions('My Leads', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="CallLogs" component={CallLogsScreen}
                 options={makeHeaderOptions('Call Logs', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="CallHistory" component={CallHistoryScreen}
@@ -340,7 +345,8 @@ function BusinessUserStack() {
                 options={makeHeaderOptions('My Team', userRef, logoutRef, currentRouteRef)} />
             <Stack.Screen name="LiveFeed" component={LiveFeedScreen}
                 options={makeHeaderOptions('Live Feed', userRef, logoutRef, currentRouteRef)} />
-
+            <Stack.Screen name="BusinessLeads" component={BusinessLeadsScreen}
+                options={makeHeaderOptions('Leads', userRef, logoutRef, currentRouteRef)} />
         </Stack.Navigator>
     );
 }
