@@ -59,7 +59,7 @@ const MENUS = {
         { id: 'BusinessDashboard', label: 'Dashboard',   icon: '🏠' },
         { id: 'LiveFeed',          label: 'Live Feed',   icon: '🔴' },
         { id: 'MyTeam',            label: 'My Team',     icon: '👥' },
-        { id: 'SalespersonActivity', label: 'SP Activity', icon: '📈' },
+        { id: 'SalespersonActivity',  label: 'SP Activity', icon: '📋' },
         { id: 'BusinessLeads',     label: 'Leads',       icon: '🎯' },  
         { id: 'CallLogs',          label: 'Call Logs',   icon: '📞' }, 
         { id: 'DeviceCallSync',    label: 'Device Sync', icon: '📲' },

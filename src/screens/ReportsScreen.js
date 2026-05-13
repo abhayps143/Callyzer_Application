@@ -822,6 +822,7 @@ import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
     TouchableOpacity, RefreshControl, StatusBar, Dimensions, Alert, TextInput,
 } from 'react-native';
+import Svg, { Circle, Path, G, Text as SvgText } from 'react-native-svg';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import * as Print from 'expo-print';
@@ -1390,91 +1391,367 @@ function BusinessReport() {
     );
 }
 
+// ── SVG Weekly Bar Chart ──────────────────────────────────
+function WeeklyBarChart({ data = [] }) {
+    if (!data.length) return (
+        <View style={{ height: 140, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#94a3b8', fontSize: 13 }}>No weekly data</Text>
+        </View>
+    );
+    const max = Math.max(...data.map(d => d.calls || 0), 1);
+    const BAR_MAX = 100;
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 140, gap: 6, paddingTop: 10 }}>
+            {data.map((d, i) => {
+                const h = Math.max(4, Math.round((d.calls / max) * BAR_MAX));
+                return (
+                    <View key={i} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 3 }}>{d.calls || 0}</Text>
+                        <View style={{ width: '70%', height: h, backgroundColor: '#3B82F6', borderRadius: 4 }} />
+                        <Text style={{ fontSize: 9, color: '#94a3b8', marginTop: 5 }}>{days[i] || `D${i+1}`}</Text>
+                    </View>
+                );
+            })}
+        </View>
+    );
+}
+
+// ── SVG Donut Chart ───────────────────────────────────────
+function DonutChart({ connected = 0, total = 1 }) {
+    const rate = total > 0 ? Math.round((connected / total) * 100) : 0;
+    const color = rate >= 60 ? '#10B981' : rate >= 40 ? '#F59E0B' : '#F43F5E';
+    const r = 40, cx = 50, cy = 50, stroke = 10;
+    const circ = 2 * Math.PI * r;
+    const dash = (rate / 100) * circ;
+    return (
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 110, height: 110 }}>
+                <Svg width={110} height={110} viewBox="0 0 100 100">
+                    <Circle cx={cx} cy={cy} r={r} fill="none" stroke="#F1F5F9" strokeWidth={stroke} />
+                    <Circle
+                        cx={cx} cy={cy} r={r} fill="none"
+                        stroke={color} strokeWidth={stroke}
+                        strokeDasharray={`${dash} ${circ - dash}`}
+                        strokeLinecap="round"
+                        transform={`rotate(-90 ${cx} ${cy})`}
+                    />
+                </Svg>
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }}>{rate}%</Text>
+                    <Text style={{ fontSize: 10, color: '#94a3b8' }}>Connected</Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
+// ── SVG Monthly Line Chart ────────────────────────────────
+function MonthlyLineChart({ data = [] }) {
+    if (!data.length) return (
+        <View style={{ height: 100, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#94a3b8', fontSize: 13 }}>No monthly data</Text>
+        </View>
+    );
+    const W = 300, H = 100, PAD = 20;
+    const max = Math.max(...data.map(d => d.total || 0), 1);
+    const pts = data.map((d, i) => ({
+        x: PAD + (i / Math.max(data.length - 1, 1)) * (W - PAD * 2),
+        y: H - PAD - ((d.total / max) * (H - PAD * 2)),
+        d,
+    }));
+    const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+    return (
+        <View>
+            <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
+                <Path d={pathD} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                {pts.map((p, i) => (
+                    <G key={i}>
+                        <Circle cx={p.x} cy={p.y} r="3" fill="#3B82F6" />
+                        <SvgText x={p.x} y={H - 2} textAnchor="middle" fontSize="7" fill="#94a3b8">{p.d.month}</SvgText>
+                    </G>
+                ))}
+            </Svg>
+        </View>
+    );
+}
+
 // ══════════════════════════════════════════════════════════════
-//  SUPER ADMIN — GENERIC REPORT
-//  API: GET /api/reports/summary?period=today|week|month
-//  Response: { total, connected, missed, connectRate }
+//  ADMIN REPORT — Website jaise full panel
 // ══════════════════════════════════════════════════════════════
 function GenericReport() {
-    const PERIODS = [
-        { key: 'today', label: 'Today', icon: '📅' },
-        { key: 'week', label: 'This Week', icon: '📆' },
-        { key: 'month', label: 'This Month', icon: '📊' },
+    const RANGES = [
+        { key: 'today',   label: 'Today' },
+        { key: 'week',    label: 'This Week' },
+        { key: 'month',   label: 'This Month' },
+        { key: 'quarter', label: 'Last 3 Months' },
     ];
 
-    const [period, setPeriod] = useState('today');
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [stats, setStats] = useState(null);
-    const [error, setError] = useState('');
+    const [range, setRange]             = useState('week');
+    const [loading, setLoading]         = useState(true);
+    const [refreshing, setRefreshing]   = useState(false);
+    const [summary, setSummary]         = useState([]);
+    const [weeklyTrend, setWeeklyTrend] = useState([]);
+    const [monthly, setMonthly]         = useState([]);
+    const [distribution, setDistribution] = useState([]);
+    const [agents, setAgents]           = useState([]);
+    const [error, setError]             = useState('');
 
     const fetchReports = useCallback(async () => {
         setError('');
         try {
-            const res = await api.getReports(period);
-            setStats(res);
+            const res = await api.getFullReport(range);
+            if (res?.summary)          setSummary(res.summary || []);
+            if (res?.weeklyTrend)      setWeeklyTrend(res.weeklyTrend || []);
+            if (res?.monthlySummary)   setMonthly(res.monthlySummary || []);
+            if (res?.callDistribution) setDistribution(res.callDistribution || []);
+            if (res?.agentPerformance) setAgents(res.agentPerformance || []);
         } catch {
-            setError('Cannot connect to server. Please try again.');
+            setError('Server se connect nahi ho saka.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [period]);
+    }, [range]);
 
     useEffect(() => { setLoading(true); fetchReports(); }, [fetchReports]);
     const onRefresh = () => { setRefreshing(true); fetchReports(); };
 
-    const totalCalls = stats?.total ?? 0;
-    const connected = stats?.connected ?? 0;
-    const missed = stats?.missed ?? 0;
-    const connectRate = stats?.connectRate ?? 0;
+    // KPI cards — backend summary array se map karo
+    const kpiMap = {};
+    (Array.isArray(summary) ? summary : []).forEach(s => { kpiMap[s.title] = s; });
+    const totalCard  = kpiMap['Total Calls']    || {};
+    const connCard   = kpiMap['Connected Calls']  || {};
+    const missedCard = kpiMap['Missed Calls']     || {};
+    const totalNum   = parseInt(totalCard.value)  || 0;
+    const connNum    = parseInt(connCard.value)   || 0;
+    const rateVal    = totalNum > 0 ? Math.round((connNum / totalNum) * 100) : 0;
 
-    if (loading && !refreshing) return <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /><Text style={styles.loadingText}>Loading reports...</Text></View>;
+    const KPI_CARDS = [
+        { label: 'Total Calls',   card: totalCard,  color: '#3B82F6', soft: '#EFF6FF', icon: '📞' },
+        { label: 'Connected',     card: connCard,   color: '#10B981', soft: '#ECFDF5', icon: '✅' },
+        { label: 'Missed',        card: missedCard, color: '#F43F5E', soft: '#FFF1F2', icon: '❌' },
+        { label: 'Connect Rate',  card: { value: `${rateVal}%`, change: null, up: rateVal >= 50 }, color: '#8B5CF6', soft: '#F5F3FF', icon: '📈' },
+    ];
 
     return (
-        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />} showsVerticalScrollIndicator={false}>
-            <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-            <View style={styles.header}>
-                <View><Text style={styles.title}>Reports & Analytics</Text><Text style={styles.subtitle}>System-wide performance insights</Text></View>
-                <View style={styles.headerIcon}><Text style={styles.headerIconText}>📊</Text></View>
+        <ScrollView
+            style={adminSt.container}
+            contentContainerStyle={adminSt.content}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3B82F6" />}
+            showsVerticalScrollIndicator={false}
+        >
+            <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+
+            {/* Header */}
+            <View style={adminSt.header}>
+                <View>
+                    <Text style={adminSt.headerTitle}>Reports & Analytics</Text>
+                    <Text style={adminSt.headerSub}>Deep dive into performance data</Text>
+                </View>
+                <TouchableOpacity onPress={fetchReports} style={adminSt.refreshBtn}>
+                    <Text style={adminSt.refreshIcon}>↻</Text>
+                </TouchableOpacity>
             </View>
 
-            <View style={{ paddingHorizontal: 16, marginTop: 16, gap: 14 }}>
-                <View style={styles.card}>
-                    <Text style={styles.cardLabel}>SELECT PERIOD</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                        {PERIODS.map(p => (
-                            <TouchableOpacity key={p.key} style={[styles.periodBtn, period === p.key && styles.periodBtnActive]} onPress={() => setPeriod(p.key)}>
-                                <Text style={styles.periodIcon}>{p.icon}</Text>
-                                <Text style={[styles.periodBtnText, period === p.key && styles.periodBtnTextActive]}>{p.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+            {/* Range Selector */}
+            <View style={adminSt.card}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {RANGES.map(r => (
+                        <TouchableOpacity
+                            key={r.key}
+                            style={[adminSt.rangeBtn, range === r.key && adminSt.rangeBtnActive]}
+                            onPress={() => setRange(r.key)}
+                        >
+                            <Text style={[adminSt.rangeBtnText, range === r.key && adminSt.rangeBtnTextActive]}>
+                                {r.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
+            {/* Error */}
+            {!!error && (
+                <View style={adminSt.errorBox}>
+                    <Text style={adminSt.errorText}>⚠️ {error}</Text>
+                    <TouchableOpacity onPress={fetchReports}>
+                        <Text style={adminSt.retryText}>Retry →</Text>
+                    </TouchableOpacity>
                 </View>
+            )}
 
-                {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>⚠️  {error}</Text><TouchableOpacity onPress={fetchReports} style={styles.retryBtn}><Text style={styles.retryText}>Retry →</Text></TouchableOpacity></View>}
-
-                {loading ? <View style={styles.center}><ActivityIndicator size="large" color="#6366f1" /></View> : (
-                    <View style={styles.statsGrid}>
-                        {[
-                            { label: 'Total Calls', value: totalCalls, color: '#3B82F6', icon: '📞' },
-                            { label: 'Connected', value: connected, color: '#10B981', icon: '✅' },
-                            { label: 'Missed', value: missed, color: '#F43F5E', icon: '❌' },
-                            { label: 'Connect Rate', value: `${connectRate}%`, color: '#8B5CF6', icon: '📈' },
-                        ].map((card, i) => (
-                            <View key={i} style={[styles.statCard, { borderTopColor: card.color }]}>
-                                <Text style={styles.statIcon}>{card.icon}</Text>
-                                <Text style={[styles.statValue, { color: card.color }]}>{String(card.value)}</Text>
-                                <Text style={styles.statLabel}>{card.label}</Text>
+            {loading ? (
+                <View style={adminSt.loadingBox}>
+                    <ActivityIndicator size="large" color="#3B82F6" />
+                    <Text style={adminSt.loadingText}>Loading reports...</Text>
+                </View>
+            ) : (
+                <>
+                    {/* KPI Cards */}
+                    <View style={adminSt.kpiGrid}>
+                        {KPI_CARDS.map(({ label, card, color, soft, icon }) => (
+                            <View key={label} style={adminSt.kpiCard}>
+                                <View style={adminSt.kpiTop}>
+                                    <View style={[adminSt.kpiIconBox, { backgroundColor: soft }]}>
+                                        <Text style={{ fontSize: 18 }}>{icon}</Text>
+                                    </View>
+                                    {card.change && (
+                                        <Text style={[adminSt.kpiChange, { color: card.up ? '#10B981' : '#F43F5E' }]}>
+                                            {card.up ? '↑' : '↓'} {card.change}
+                                        </Text>
+                                    )}
+                                </View>
+                                <Text style={[adminSt.kpiValue, { color }]}>{card.value ?? '—'}</Text>
+                                <Text style={adminSt.kpiLabel}>{label}</Text>
                             </View>
                         ))}
                     </View>
-                )}
-            </View>
+
+                    {/* Weekly Bar Chart */}
+                    <View style={adminSt.card}>
+                        <Text style={adminSt.cardTitle}>📊 7-Day Call Volume</Text>
+                        <WeeklyBarChart data={weeklyTrend} />
+                    </View>
+
+                    {/* Donut + Distribution */}
+                    <View style={adminSt.card}>
+                        <Text style={adminSt.cardTitle}>📈 Connection Rate</Text>
+                        <DonutChart connected={connNum} total={totalNum} />
+                        <View style={{ gap: 8, marginTop: 16 }}>
+                            {distribution.map((d, i) => (
+                                <View key={i} style={adminSt.distRow}>
+                                    <View style={[adminSt.distDot, { backgroundColor: d.color }]} />
+                                    <Text style={adminSt.distLabel}>{d.name}</Text>
+                                    <Text style={adminSt.distVal}>{d.value}</Text>
+                                    <Text style={adminSt.distPct}>({d.percent}%)</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Monthly Line Chart */}
+                    {monthly.length > 0 && (
+                        <View style={adminSt.card}>
+                            <Text style={adminSt.cardTitle}>📉 6-Month Trend</Text>
+                            <MonthlyLineChart data={monthly} />
+                        </View>
+                    )}
+
+                    {/* Agent Performance Table */}
+                    {agents.length > 0 && (
+                        <View style={[adminSt.card, { paddingHorizontal: 0 }]}>
+                            <View style={adminSt.tableHeaderRow}>
+                                <Text style={adminSt.cardTitle}>👥 Salesperson Performance</Text>
+                                <Text style={adminSt.agentCount}>{agents.length} agents</Text>
+                            </View>
+                            {/* Table head */}
+                            <View style={adminSt.tHead}>
+                                {['Agent', 'Total', 'Conn.', 'Missed', 'Rate'].map(h => (
+                                    <Text key={h} style={[adminSt.tH, h === 'Agent' ? { flex: 2 } : { flex: 1 }]}>{h}</Text>
+                                ))}
+                            </View>
+                            {agents.map((ag, i) => {
+                                const rate = ag.rate ?? 0;
+                                const rColor = rate >= 60 ? '#10B981' : rate >= 40 ? '#F59E0B' : '#F43F5E';
+                                const avatarColors = ['#3B82F6','#8B5CF6','#10B981','#F43F5E','#F59E0B','#06B6D4'];
+                                const aColor = avatarColors[i % 6];
+                                return (
+                                    <View key={ag._id || i} style={[adminSt.tRow, i % 2 === 0 && { backgroundColor: '#f8fafc' }]}>
+                                        <View style={[adminSt.tCell, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                                            <View style={[adminSt.agentAvatar, { backgroundColor: aColor }]}>
+                                                <Text style={adminSt.agentAvatarText}>{(ag.name || 'A').charAt(0).toUpperCase()}</Text>
+                                            </View>
+                                            <View>
+                                                <Text style={adminSt.agentName} numberOfLines={1}>{ag.name}</Text>
+                                                <Text style={adminSt.agentEmail} numberOfLines={1}>{ag.email}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={[adminSt.tCell, { flex: 1, color: '#3B82F6', fontWeight: '700' }]}>{ag.calls ?? 0}</Text>
+                                        <Text style={[adminSt.tCell, { flex: 1, color: '#10B981', fontWeight: '700' }]}>{ag.connected ?? 0}</Text>
+                                        <Text style={[adminSt.tCell, { flex: 1, color: '#F43F5E', fontWeight: '700' }]}>{ag.missed ?? 0}</Text>
+                                        <View style={[adminSt.tCell, { flex: 1 }]}>
+                                            <Text style={[adminSt.rateText, { color: rColor }]}>{rate}%</Text>
+                                            <View style={adminSt.rateBar}>
+                                                <View style={[adminSt.rateBarFill, { width: `${Math.min(rate, 100)}%`, backgroundColor: rColor }]} />
+                                            </View>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+
+                    {/* Empty state */}
+                    {agents.length === 0 && totalNum === 0 && (
+                        <View style={adminSt.emptyCard}>
+                            <Text style={{ fontSize: 40, marginBottom: 10 }}>📊</Text>
+                            <Text style={adminSt.emptyTitle}>No Data Available</Text>
+                            <Text style={adminSt.emptySub}>No call records for the selected period.</Text>
+                        </View>
+                    )}
+                </>
+            )}
             <View style={{ height: 40 }} />
         </ScrollView>
     );
 }
+
+const adminSt = StyleSheet.create({
+    container:    { flex: 1, backgroundColor: '#f8fafc' },
+    content:      { padding: 16, gap: 14 },
+    header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+    headerTitle:  { fontSize: 20, fontWeight: '800', color: '#0f172a' },
+    headerSub:    { fontSize: 13, color: '#94a3b8', marginTop: 2 },
+    refreshBtn:   { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' },
+    refreshIcon:  { fontSize: 18, color: '#3B82F6', fontWeight: '700' },
+
+    card:         { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#f1f5f9', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+    cardTitle:    { fontSize: 13, fontWeight: '700', color: '#1e293b', marginBottom: 12 },
+
+    rangeBtn:         { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f1f5f9' },
+    rangeBtnActive:   { backgroundColor: '#2563EB' },
+    rangeBtnText:     { fontSize: 13, fontWeight: '600', color: '#64748b' },
+    rangeBtnTextActive: { color: '#ffffff' },
+
+    errorBox:     { backgroundColor: '#FFF1F2', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    errorText:    { fontSize: 13, color: '#F43F5E', flex: 1 },
+    retryText:    { fontSize: 13, color: '#F43F5E', fontWeight: '700', marginLeft: 10 },
+    loadingBox:   { alignItems: 'center', paddingVertical: 60 },
+    loadingText:  { fontSize: 13, color: '#94a3b8', marginTop: 12 },
+
+    kpiGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    kpiCard:      { width: '47.5%', backgroundColor: '#ffffff', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#f1f5f9', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+    kpiTop:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    kpiIconBox:   { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    kpiChange:    { fontSize: 11, fontWeight: '700' },
+    kpiValue:     { fontSize: 24, fontWeight: '800', color: '#0f172a' },
+    kpiLabel:     { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+
+    distRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    distDot:      { width: 8, height: 8, borderRadius: 4 },
+    distLabel:    { flex: 1, fontSize: 13, color: '#64748b' },
+    distVal:      { fontSize: 13, fontWeight: '700', color: '#1e293b' },
+    distPct:      { fontSize: 11, color: '#94a3b8', width: 44, textAlign: 'right' },
+
+    tableHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12 },
+    agentCount:   { fontSize: 11, color: '#94a3b8' },
+    tHead:        { flexDirection: 'row', backgroundColor: '#f8fafc', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#f1f5f9' },
+    tH:           { fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' },
+    tRow:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f8fafc' },
+    tCell:        { fontSize: 13, color: '#1e293b' },
+    agentAvatar:  { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    agentAvatarText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+    agentName:    { fontSize: 12, fontWeight: '600', color: '#1e293b' },
+    agentEmail:   { fontSize: 10, color: '#94a3b8' },
+    rateText:     { fontSize: 11, fontWeight: '700', marginBottom: 3 },
+    rateBar:      { height: 4, backgroundColor: '#f1f5f9', borderRadius: 2, overflow: 'hidden' },
+    rateBarFill:  { height: 4, borderRadius: 2 },
+
+    emptyCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 40, alignItems: 'center', borderWidth: 1, borderColor: '#f1f5f9' },
+    emptyTitle:   { fontSize: 16, fontWeight: '700', color: '#1e293b' },
+    emptySub:     { fontSize: 13, color: '#94a3b8', marginTop: 4, textAlign: 'center' },
+});
 
 // ══════════════════════════════════════════════════════════════
 //  ROOT EXPORT — Role Router (matches website Reports.jsx)
